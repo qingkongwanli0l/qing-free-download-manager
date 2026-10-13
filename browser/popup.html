@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qing Free Download Manager</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header><span class="mark" aria-hidden="true">↓</span><div><h1>Qing</h1><p>Free Download Manager</p></div><button id="refresh" title="刷新连接状态">刷新</button></header>
+<p id="connection" role="status">正在连接桌面端…</p>
+<p id="status" role="status" hidden></p>
+<section id="site-access" hidden>
+<p id="site-access-explanation" class="hint">Qing 尚未获得网站访问权限，无法发现页面媒体或读取下载请求。请主动授权所有网站访问；是否使用登录信息仍由下面的设置控制。</p>
+<button id="grant-site-access">允许网站访问</button>
+<p id="site-access-status" class="hint" role="status"></p>
+</section>
+<section id="unconfirmed" hidden aria-label="需要核对的下载"></section>
+<section id="exclusionSuggestions" hidden aria-label="自动捕获例外建议"></section>
+<section aria-labelledby="media-title">
+<div class="row"><h2 id="media-title">此页面的媒体</h2><span id="count">0 项</span></div>
+<p id="empty">播放媒体后，可下载的音频、视频和字幕会出现在这里。</p>
+<ul id="media"></ul>
+<button id="send-selected" class="primary" disabled>下载所选媒体</button>
+<button id="open-box" hidden>打开 Qing 媒体窗口</button>
+<div class="row actions"><button id="selected-links">下载选中链接</button><button id="all-links">下载全部链接</button></div>
+</section>
+<details>
+<summary>捕获与隐私设置</summary>
+<form id="settings">
+<label><input id="captureEnabled" type="checkbox"> 自动将浏览器下载交给本机 Qing</label>
+<label><input id="suppressBlankTab" type="checkbox"> 成功接管后关闭本次下载新建的空白页</label>
+<label><input id="forbidBrowserReturn" type="checkbox"> Qing 明确取消添加时，同时取消浏览器下载</label>
+<p class="hint">接收结果尚未确认时，下载保持暂停，由你核对后决定如何继续。</p>
+<label><input id="mediaEnabled" type="checkbox"> 发现音频、视频和字幕</label>
+<p id="media-size" class="hint"></p>
+<label><input id="captureSubtitles" type="checkbox"> 在独立媒体窗口中显示发现的字幕</label>
+<label><input id="offerSubtitles" type="checkbox"> 在页面按钮和媒体列表中提供发现的字幕</label>
+<label><input id="showExpandedStreams" type="checkbox"> 显示“其他媒体流”选择入口</label>
+<p class="hint">点击该入口后，由本机 Qing 查询此媒体可用的音视频格式；并非所有链接都有多种格式。</p>
+<p class="hint">字幕按页面列出，无法保证与某个视频或语言一一对应。</p>
+<label class="field" for="mediaMode">媒体下载入口<select id="mediaMode"><option value="button">播放器旁的按钮</option><option value="box">独立媒体窗口</option></select></label>
+<p class="hint">独立窗口的行数、缩略图、置顶和透明度在窗口内设置。关闭后需在此手动重新打开。</p>
+<label><input id="showButtons" type="checkbox"> 在播放器旁显示下载按钮</label>
+<label class="field" for="buttonSize">按钮大小<select id="buttonSize"><option value="standard">标准</option><option value="medium">紧凑</option><option value="mini">最小</option></select></label>
+<label class="field" for="buttonOpacity">按钮不透明度（0–100%）<input id="buttonOpacity" type="number" min="0" max="100" step="5" value="100"></label>
+<label><input id="hideFullscreen" type="checkbox"> 全屏时隐藏页面按钮</label>
+<p class="hint">页面按钮受浏览器全屏显示范围限制。系统级置顶请使用独立媒体窗口。</p>
+<label><input id="useCredentials" type="checkbox"> 使用网站的登录状态</label>
+<p class="hint">启用后，下载所需的 Cookie 和认证信息仅发送到本机 Qing，不保存到扩展设置中。</p>
+<label class="field" for="bypassKey">临时使用浏览器下载：按住<select id="bypassKey"><option value="alt">Alt</option><option value="ctrl">Ctrl</option><option value="shift">Shift</option></select></label>
+<label class="field" for="excludedHosts">不接管普通下载的网站（每行一个域名）<textarea id="excludedHosts" rows="3" placeholder="example.com"></textarea></label>
+<label class="field" for="mediaExcludedHosts">不发现媒体的网站（每行一个域名）<textarea id="mediaExcludedHosts" rows="3" placeholder="example.com"></textarea></label>
+<label class="field" for="excludedExtensions">不自动捕获的文件类型（逗号分隔）<input id="excludedExtensions" type="text" placeholder="pdf, jpg"></label>
+<label class="field" for="excludedUrls">不自动捕获的链接规则（每行一条）<textarea id="excludedUrls" rows="3" placeholder="https://example.com/files/*"></textarea></label>
+<p class="hint">链接规则区分大小写，星号匹配任意字符。删除规则并保存后恢复捕获；请勿在规则中填写密码或登录令牌。</p>
+<p class="hint">网站规则包括子域名。右键手动下载不受自动捕获规则限制。桌面端设置同样生效。</p>
+<button class="primary" type="submit">保存设置</button>
+</form>
+</details>
+<footer>免费 · 开源 · 无需产品账号</footer>
+<script src="i18n.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
+

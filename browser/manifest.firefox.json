@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "Qing Free Download Manager",
+  "version": "0.1.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "en",
+  "permissions": [
+    "storage",
+    "downloads",
+    "contextMenus",
+    "cookies",
+    "tabs",
+    "scripting",
+    "webRequest",
+    "webNavigation",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "Qing Free Download Manager",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "i18n.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "scripts": [
+      "i18n.js",
+      "background.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "qing-download-manager@qingkongwanli0l.github.io",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["browsingActivity", "websiteContent"],
+        "optional": ["authenticationInfo"]
+      }
+    }
+  }
+}
