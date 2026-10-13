@@ -190,7 +190,7 @@ namespace QingDownloadManager
                     {
                         if (finalizing) return;
                         preDownloadDirty = true; preDownloadChangedAt = DateTime.UtcNow;
-                        if (PreDownloadItem != null) preDownloadEngine.Pause(PreDownloadItem);
+                        if (PreDownloadItem != null) preDownloadEngine.Stop(PreDownloadItem);
                     };
                 foreach (Control field in new Control[] { filename, directory })
                     field.TextChanged += delegate { if (!finalizing && PreDownloadItem == null) { preDownloadDirty = true; preDownloadChangedAt = DateTime.UtcNow; } };
@@ -391,7 +391,7 @@ namespace QingDownloadManager
                     await preDownloadTransition;
                     if (PreDownloadItem != null)
                     {
-                        preDownloadEngine.Pause(PreDownloadItem); await preDownloadTask;
+                        preDownloadEngine.Stop(PreDownloadItem); await preDownloadTask;
                         DownloadItem item = Result.Count == 1 ? Result[0] : null;
                         if (!preDownloadDirty && item != null && item.Url == PreDownloadItem.Url && item.Kind == "file" && item.Method == "GET")
                         {

@@ -22,6 +22,8 @@ Windows 桌面下载管理器。产品无需账号；需要网站授权的下载
 
 HTTP 下载的失败重试设置仅用于 GET 请求。POST 失败后保留错误，由用户决定是否重新提交；收到 301、302 或 303 跳转时改用不带请求体的 GET，307、308 跳转则保留原方法和请求体。
 
+HTTP(S) 的 curl 分支支持保持当前请求的暂停/继续，以及运行中调整单项限速。停止会结束请求并保留临时文件；POST 停止或程序退出后，再次开始会重新提交请求。单项限速与全局设置同时为正时，此分支使用较小值；跨 curl、aria2 和媒体下载的合计带宽控制仍未完成。
+
 “使用服务器文件时间”开启时保留服务器提供的修改日期，关闭时使用下载日期；curl HTTP(S) 下载在 32 位程序中也可保留 2038 年之后的有效日期。
 
 下载设置可开启“显示已解析的下载直链”，在任务详情和进度窗口查看普通文件本次传输实际使用的地址；添加窗口读取文件信息后会单独显示查询得到的地址。直链仅在内存中保留，不写入任务记录或备份；显示时隐藏地址中的用户名和密码。编辑任务和“复制原始链接”继续使用原始链接，未取得实际传输地址时也显示原始链接。
@@ -66,7 +68,7 @@ HTTP 下载的失败重试设置仅用于 GET 请求。POST 失败后保留错�
 
 “帮助 → 检查更新”查询本项目 GitHub Releases 中的稳定版本，显示更新说明并允许跳过版本。自动检查默认关闭，可在常规设置中启用、设置天数或恢复已跳过版本的提示。安装版仅在存在同架构安装包及 SHA256 摘要时提供“下载并安装”；校验成功后暂停任务并启动安装程序。便携版从发行版页面手动更新。
 
-桌面设置可选择 English、简体中文、繁體中文、Deutsch 或 Français，重启后生效。首次运行可识别系统的德语、法语及繁体中文区域设置；已有语言偏好与分类名称保持不变。安装程序仍可选择 English 或简体中文，首次运行沿用安装语言，已有语言偏好保持不变。浏览器扩展可分别选择安装；可选的种子和磁力链接登记把 Qing 加入 Windows 可选处理程序。默认程序仍由用户在 Windows 中选择。“工具 → 注册种子与磁链打开方式…”也可在安装后登记。
+桌面设置可选择 English、简体中文、繁體中文、Deutsch、Français、Español 或 Português (Brasil)，重启后生效。首次运行可识别这些语言的系统区域设置；葡语区域统一使用巴西葡语。已有语言偏好与分类名称保持不变。安装程序仍可选择 English 或简体中文，首次运行沿用安装语言，已有语言偏好保持不变。浏览器扩展可分别选择安装；可选的种子和磁力链接登记把 Qing 加入 Windows 可选处理程序。默认程序仍由用户在 Windows 中选择。“工具 → 注册种子与磁链打开方式…”也可在安装后登记。
 
 BT 设置可启用启动时检查 `.torrent` 默认程序；若当前默认程序不是此 Qing 安装，将提示打开 Windows 默认程序设置。提示可以关闭，并在 BT 设置中恢复。
 
@@ -88,13 +90,22 @@ BT 设置可启用启动时检查 `.torrent` 默认程序；若当前默认程�
 | 文件 | 用途 | 上游 |
 | --- | --- | --- |
 | `aria2c.exe` | HTTP、HTTPS、FTP、BitTorrent | [aria2](https://github.com/aria2/aria2) |
-| `curl.exe` | FTPS、POST 及带站点凭据的 HTTP 请求 | [curl](https://curl.se/) |
+| `curl.exe` | 文件信息查询、FTP/FTPS 请求 | [curl](https://curl.se/) |
+| `qcurl.dll`、`libcurl.dll` | HTTP(S) 的 curl 分支：POST、带站点凭据及指定 curl 的任务 | 本项目的原生桥接与 [curl](https://curl.se/) |
 | `yt-dlp.exe` | 网站媒体、HLS、DASH、播放列表 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) |
 | `ffmpeg.exe` | 合并、转换和媒体处理 | [FFmpeg](https://ffmpeg.org/) |
 | `ffprobe.exe` | 媒体信息 | [FFmpeg](https://ffmpeg.org/) |
 | `qjs.exe` | 媒体提取所需 JavaScript 运行时 | [QuickJS-NG](https://github.com/quickjs-ng/quickjs) |
 
 可通过 `-EngineDirectory` 在构建时复制已经准备好的组件目录。上游最新版本不一定兼容 Windows 7；必须为目标系统选择合适构建，并保留对应版本的许可、依赖声明和所需对应源码。
+
+`qcurl.dll` 和 `libcurl.dll` 必须与 `QingFDM.exe` 同架构，放在同一个 `engines` 目录，并提供 `curl-ca-bundle.crt`。原生桥接源码位于 `native`；准备好匹配架构的 curl 8.20.0 头文件、导入库和 MinGW MSVCRT 编译器后，可独立构建：
+
+```powershell
+.\native\build.ps1 -Architecture x64 -CompilerPath C:\Tools\w64devkit\bin\gcc.exe -CurlIncludeDirectory C:\Deps\curl\include -CurlImportLibrary C:\Deps\curl\x64\libcurl.dll.a -OutputDirectory C:\Build\Qing-x64\engines
+```
+
+libcurl 的依赖、构建配方和重链接材料随对应组件的源码包提供；其组合许可包含 LGPL 组件，不能以本项目 MIT 许可证替代。
 
 单独打包浏览器扩展：
 

@@ -35,6 +35,8 @@ namespace QingDownloadManager
             internal DownloadItem Item;
             internal CancellationTokenSource Cancellation = new CancellationTokenSource();
             internal Task Task;
+            internal CurlTransfer Curl;
+            internal Task CurlTask;
             internal DownloadItem Restart;
             internal bool Removed, DeleteFiles, DeleteCompletedOutput, PreDownload;
         }
@@ -89,6 +91,12 @@ namespace QingDownloadManager
                 if (transfers.TryGetValue(item.Id, out existing))
                 {
                     if (existing.Cancellation.IsCancellationRequested) existing.Restart = item;
+                    else if (existing.Curl != null)
+                    {
+                        existing.Curl.SetPaused(false);
+                        item.State = DownloadState.Running;
+                        item.Phase = "download";
+                    }
                     return existing.Task;
                 }
                 if (!preDownload && item.CompletedAt.HasValue && !IsTorrent(item))
@@ -114,7 +122,32 @@ namespace QingDownloadManager
             return task;
         }
 
-        public void Pause(DownloadItem item) { Stop(item, false, false); }
+        public void Pause(DownloadItem item)
+        {
+            lock (sync)
+            {
+                Transfer transfer;
+                if (transfers.TryGetValue(item.Id, out transfer) && transfer.Curl != null && !transfer.Cancellation.IsCancellationRequested)
+                {
+                    transfer.Curl.SetPaused(true);
+                    item.State = DownloadState.Paused;
+                    item.BytesPerSecond = item.UploadBytesPerSecond = 0;
+                }
+                else { Stop(item, false, false); return; }
+            }
+            Notify(item);
+        }
+        public void Stop(DownloadItem item) { Stop(item, false, false, true); }
+        public Task StopAsync(DownloadItem item)
+        {
+            lock (sync)
+            {
+                Transfer transfer;
+                Task pending = transfers.TryGetValue(item.Id, out transfer) ? transfer.Task : Task.FromResult(0);
+                Stop(item);
+                return pending;
+            }
+        }
         public void Remove(DownloadItem item, bool deleteFiles = false) { Stop(item, true, deleteFiles); }
         public async Task ResetPartialAsync(DownloadItem item)
         {
@@ -144,13 +177,13 @@ namespace QingDownloadManager
             item.CompletedAt = null; item.State = DownloadState.Paused;
         }
 
-        private void Stop(DownloadItem item, bool removed, bool deleteFiles)
+        private void Stop(DownloadItem item, bool removed, bool deleteFiles, bool stopped = false)
         {
             bool deleteImmediately = false;
             bool completed = item.State == DownloadState.Complete || item.State == DownloadState.Seeding || item.CompletedAt.HasValue;
             lock (sync)
             {
-                item.State = removed ? DownloadState.Stopped : DownloadState.Paused;
+                item.State = removed || stopped ? DownloadState.Stopped : DownloadState.Paused;
                 item.BytesPerSecond = 0;
                 item.UploadBytesPerSecond = 0;
                 item.Phase = "";
@@ -175,6 +208,8 @@ namespace QingDownloadManager
             lock (sync)
             {
                 settings = value.Copy();
+                foreach (Transfer transfer in transfers.Values)
+                    if (transfer.Curl != null) transfer.Curl.SetSpeedLimit(EffectiveSpeedLimit(transfer.Item.SpeedLimit, settings.SpeedLimit));
                 if (!settings.UpnpEnabled && portMapping != null) { stop = portMapping; portMapping = null; }
                 if (settings.UpnpEnabled && torrentUsers.Count > 0 && portMapping == null)
                 {
@@ -221,6 +256,20 @@ namespace QingDownloadManager
             }
         }
         private AppSettings Settings() { lock (sync) return settings.Copy(); }
+        private static long EffectiveSpeedLimit(long itemLimit, long globalLimit)
+        {
+            return itemLimit > 0 && globalLimit > 0 ? Math.Min(itemLimit, globalLimit) : Math.Max(itemLimit, globalLimit);
+        }
+        public void SetSpeedLimit(DownloadItem item, long value)
+        {
+            lock (sync)
+            {
+                item.SpeedLimit = value;
+                Transfer transfer;
+                if (transfers.TryGetValue(item.Id, out transfer) && transfer.Curl != null)
+                    transfer.Curl.SetSpeedLimit(EffectiveSpeedLimit(value, settings.SpeedLimit));
+            }
+        }
         private void Notify(DownloadItem item)
         {
             Action<DownloadItem> handler = Changed;
@@ -278,7 +327,7 @@ namespace QingDownloadManager
                 }
                 else if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase) || !item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) || !IsTorrent(item) &&
                     (item.UseCurl && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) || HasRequestCredentials(item, current)))
-                    await RunCurlAsync(item, current, token, automaticName).ConfigureAwait(false);
+                    await RunCurlAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                 else await RunAriaAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
                 if (transfer.PreDownload) { item.State = DownloadState.Paused; return; }
@@ -565,7 +614,7 @@ namespace QingDownloadManager
                             await RpcAsync("aria2.removeDownloadResult", token, item.EngineId).ConfigureAwait(false);
                             item.EngineId = ""; item.UseCurl = true;
                             File.Delete(partial + ".aria2");
-                            await RunCurlAsync(item, current, token, automaticName).ConfigureAwait(false);
+                            await RunCurlAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                             return;
                         }
                         throw new IOException(error);
@@ -1001,7 +1050,52 @@ namespace QingDownloadManager
             }
         }
 
-        private async Task RunCurlAsync(DownloadItem item, AppSettings current, CancellationToken token, bool automaticName)
+        private async Task RunCurlAsync(Transfer transfer, AppSettings current, CancellationToken token, bool automaticName)
+        {
+            DownloadItem item = transfer.Item;
+            if (!item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) && !item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+            {
+                await RunCurlCliAsync(item, current, token, automaticName).ConfigureAwait(false);
+                return;
+            }
+            string partial = PartialPath(item);
+            if (item.EngineId.Length > 0)
+            {
+                if (daemon != null && !daemon.HasExited)
+                    await RpcAsync("aria2.forceRemove", token, item.EngineId).ConfigureAwait(false);
+                item.EngineId = "";
+            }
+            if (File.Exists(partial + ".aria2"))
+            {
+                File.Delete(partial);
+                File.Delete(partial + ".aria2");
+                item.BytesReceived = 0;
+            }
+            DownloadMetadata source = null;
+            if (item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+            {
+                source = await PrepareHttpResumeAsync(item, current, token).ConfigureAwait(false);
+                if (item.TotalBytes > 0 && item.BytesReceived == item.TotalBytes && File.Exists(partial) && new FileInfo(partial).Length == item.TotalBytes) return;
+            }
+            CurlTransfer curl = new CurlTransfer(item, current, MediaTools.EnginePath("qcurl.dll"));
+            Task<DownloadMetadata> pending;
+            lock (sync)
+            {
+                token.ThrowIfCancellationRequested();
+                curl.SetSpeedLimit(EffectiveSpeedLimit(item.SpeedLimit, settings.SpeedLimit));
+                transfer.Curl = curl;
+                pending = curl.RunAsync(partial, source, delegate { Notify(item); }, token);
+                transfer.CurlTask = pending;
+            }
+            try
+            {
+                DownloadMetadata result = await pending.ConfigureAwait(false);
+                if (automaticName && result.FileName.Length > 0) item.FileName = result.FileName;
+            }
+            finally { lock (sync) { transfer.Curl = null; transfer.CurlTask = null; } }
+        }
+
+        private async Task RunCurlCliAsync(DownloadItem item, AppSettings current, CancellationToken token, bool automaticName)
         {
             string partial = PartialPath(item);
             string headers = Path.Combine(dataDirectory, item.Id + ".headers");
@@ -1012,13 +1106,6 @@ namespace QingDownloadManager
             {
                 args.AddRange(new string[] { "--continue-at", "-", "--retry", current.RetryCount.ToString(CultureInfo.InvariantCulture),
                     "--retry-delay", current.RetryDelaySeconds.ToString(CultureInfo.InvariantCulture) });
-                if (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
-                {
-                    DownloadMetadata source = await PrepareHttpResumeAsync(item, current, token).ConfigureAwait(false);
-                    if (item.TotalBytes > 0 && item.BytesReceived == item.TotalBytes && File.Exists(partial) && new FileInfo(partial).Length == item.TotalBytes) return;
-                    if (source.ETag.Length > 0 && !source.ETag.StartsWith("W/", StringComparison.OrdinalIgnoreCase)) args.AddRange(new string[] { "--header", "If-Match: " + source.ETag });
-                    else if (source.LastModified.Length > 0) args.AddRange(new string[] { "--header", "If-Unmodified-Since: " + source.LastModified });
-                }
             }
             else
             {
@@ -1058,18 +1145,6 @@ namespace QingDownloadManager
                 }
                 if (restart) await CurlRequestAsync(args, item, current, headers, progress, token).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
-                if (current.UseServerTimestamp && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)))
-                {
-                    string modified = "";
-                    foreach (string line in File.ReadLines(headers))
-                    {
-                        if (line.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase)) modified = "";
-                        else if (line.StartsWith("Last-Modified:", StringComparison.OrdinalIgnoreCase)) modified = line.Substring(14).Trim();
-                    }
-                    DateTime timestamp;
-                    if (DateTime.TryParse(modified, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out timestamp))
-                        File.SetLastWriteTimeUtc(partial, timestamp);
-                }
                 item.BytesReceived = item.TotalBytes = new FileInfo(partial).Length;
                 if (automaticName && File.Exists(headers))
                 {
@@ -1219,6 +1294,7 @@ namespace QingDownloadManager
         public void Dispose()
         {
             List<Task> tasks = new List<Task>();
+            List<Task> curlTasks = new List<Task>();
             lock (sync)
             {
                 if (disposed) return;
@@ -1228,9 +1304,12 @@ namespace QingDownloadManager
                     transfer.Item.State = DownloadState.Paused;
                     transfer.Cancellation.Cancel();
                     tasks.Add(transfer.Task);
+                    if (transfer.CurlTask != null) curlTasks.Add(transfer.CurlTask);
                 }
             }
             Task.WaitAll(tasks.ToArray(), 6000);
+            try { Task.WaitAll(curlTasks.ToArray()); }
+            catch (AggregateException) { }
             PortMapping mapping;
             lock (sync) { mapping = portMapping; portMapping = null; }
             if (mapping != null) StopMappingAsync(mapping).GetAwaiter().GetResult();

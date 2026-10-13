@@ -355,7 +355,7 @@ namespace QingDownloadManager
                 var save = new Button { Text = T("确定", "OK"), DialogResult = DialogResult.OK }; buttons.Controls.AddRange(new Control[] { cancel, save });
                 dialog.Controls.Add(speed); dialog.Controls.Add(label); dialog.Controls.Add(buttons); dialog.AcceptButton = save; dialog.CancelButton = cancel;
                 Appearance.Apply(dialog); if (dialog.ShowDialog(this) != DialogResult.OK) return;
-                foreach (DownloadItem item in items) item.SpeedLimit = (long)speed.Value * 1024;
+                foreach (DownloadItem item in items) engine.SetSpeedLimit(item, (long)speed.Value * 1024);
                 Save(); ShowDetails();
             }
         }
@@ -560,7 +560,8 @@ namespace QingDownloadManager
         void Change(DownloadItem item, DownloadState state)
         {
             if (state == DownloadState.Queued && Active(item)) return;
-            if (Active(item)) engine.Pause(item);
+            if (state == DownloadState.Stopped) engine.Stop(item);
+            else if (Active(item)) engine.Pause(item);
             item.State = state; item.BytesPerSecond = 0; item.Error = ""; item.ForceStart = false;
         }
         void ForceStart() { foreach (DownloadItem item in Selected()) { Change(item, DownloadState.Queued); item.ForceStart = true; } Save(); }
@@ -589,19 +590,22 @@ namespace QingDownloadManager
                     if (choice == DialogResult.Cancel) return;
                     newDownload = choice == DialogResult.No;
                 }
-                if (newDownload && item.BytesReceived > 0)
+                refreshingItem = item; Enabled = false;
+                try
                 {
-                    engine.Remove(item); item.State = DownloadState.History;
-                    replacement.Id = Guid.NewGuid().ToString("N"); replacement.BytesReceived = replacement.TotalBytes = 0; replacement.CompletedAt = null;
-                    replacement.WorkingDirectory = ""; replacement.OwnedFiles.Clear();
-                    replacement.MediaFiles.Clear();
-                    replacement.DirectUrl = "";
-                    downloads.Add(replacement); Save(); RefreshRows(); return;
-                }
-                if (item.Url != replacement.Url)
-                {
-                    refreshingItem = item; Enabled = false;
-                    try
+                    await engine.StopAsync(item);
+                    if (IsDisposed) return;
+                    replacement.BytesReceived = item.BytesReceived; replacement.TotalBytes = item.TotalBytes;
+                    if (newDownload && item.BytesReceived > 0)
+                    {
+                        engine.Remove(item); item.State = DownloadState.History;
+                        replacement.Id = Guid.NewGuid().ToString("N"); replacement.BytesReceived = replacement.TotalBytes = 0; replacement.CompletedAt = null;
+                        replacement.WorkingDirectory = ""; replacement.OwnedFiles.Clear();
+                        replacement.MediaFiles.Clear();
+                        replacement.DirectUrl = "";
+                        downloads.Add(replacement); Save(); RefreshRows(); return;
+                    }
+                    if (item.Url != replacement.Url)
                     {
                         await engine.ResetPartialAsync(item);
                         if (IsDisposed) return;
@@ -612,9 +616,9 @@ namespace QingDownloadManager
                         replacement.MediaAudioBytes = replacement.MediaAudioTotal = replacement.MediaVideoBytes = replacement.MediaVideoTotal = 0;
                         replacement.OwnedFiles = new List<string>(item.OwnedFiles);
                     }
-                    finally { refreshingItem = null; if (!IsDisposed) Enabled = true; }
+                    engine.Remove(item); downloads[downloads.IndexOf(item)] = replacement; Save(); RefreshRows();
                 }
-                engine.Remove(item); downloads[downloads.IndexOf(item)] = replacement; Save(); RefreshRows();
+                finally { refreshingItem = null; if (!IsDisposed) Enabled = true; }
             }
         }
 
