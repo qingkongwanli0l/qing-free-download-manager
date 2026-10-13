@@ -13,7 +13,6 @@ namespace QingDownloadManager
     {
         private readonly AppSettings settings;
         private MediaInfo inspectedInfo;
-        private readonly bool chinese;
         private readonly TextBox urlBox = new TextBox();
         private readonly TextBox directoryBox = new TextBox();
         private readonly ComboBox formatBox = new ComboBox();
@@ -55,7 +54,7 @@ namespace QingDownloadManager
 
         public MediaDialog(AppSettings settings, string initialUrl)
         {
-            this.settings = settings.Copy(); chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            this.settings = settings.Copy();
             Text = L("Add video or audio", "添加视频或音频"); Font = new Font("Segoe UI", 9F);
             AutoScaleMode = AutoScaleMode.Font; StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(800, 680); Size = new Size(1020, 820); ShowInTaskbar = false; MinimizeBox = false;
@@ -144,7 +143,7 @@ namespace QingDownloadManager
             panel.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 5, 8, 5) }, 0, row);
             control.Dock = DockStyle.Fill; panel.Controls.Add(control, 1, row);
         }
-        private string L(string en, string zh) { return chinese ? zh : en; }
+        private string L(string en, string zh) { return Localization.Text(settings.Language, en, zh); }
         private void ResetTracks()
         {
             videoFormats.Clear(); audioFormats.Clear(); videoTrack.Items.Clear(); audioTrack.Items.Clear();
@@ -191,7 +190,7 @@ namespace QingDownloadManager
                 ShowMedia(info, url); AcceptButton = addButton;
             }
             catch (OperationCanceledException) { if (!IsDisposed && !Disposing) status.Text = L("Analysis stopped.", "解析已停止。"); }
-            catch (Exception error) { if (!IsDisposed && !Disposing) status.Text = L("Unable to analyze: ", "无法解析：") + error.Message; }
+            catch (Exception error) { if (!IsDisposed && !Disposing) status.Text = L("Unable to analyze: ", "无法解析：") + Localization.Error(settings.Language, error.Message); }
             finally
             {
                 inspection = null; cancellation.Dispose();

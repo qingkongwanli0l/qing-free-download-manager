@@ -12,7 +12,6 @@ namespace QingDownloadManager
     {
         private readonly DownloadItem item;
         private readonly AppSettings settings;
-        private readonly bool chinese;
         private readonly ListView files = new ListView();
         private readonly Label status = new Label();
         private readonly Button accept = new Button();
@@ -24,7 +23,6 @@ namespace QingDownloadManager
         public TorrentFilesDialog(DownloadItem item, AppSettings settings)
         {
             this.item = item.Copy(); this.settings = settings.Copy();
-            chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
             Text = T("选择种子中的文件", "Select torrent files"); Size = new Size(800, 590); MinimumSize = new Size(650, 440);
             Font = new Font("Segoe UI", 9F); AutoScaleMode = AutoScaleMode.Font; StartPosition = FormStartPosition.CenterParent; ShowInTaskbar = false;
             var panel = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(12), ColumnCount = 1, RowCount = 4 };
@@ -56,7 +54,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        private string T(string zh, string en) { return chinese ? zh : en; }
+        private string T(string zh, string en) { return Localization.Text(settings.Language, en, zh); }
 
         private async void LoadFiles(object sender, EventArgs args)
         {
@@ -80,7 +78,7 @@ namespace QingDownloadManager
                 files.EndUpdate();
             }
             catch (OperationCanceledException) { if (!IsDisposed && !Disposing) status.Text = T("已取消读取。", "Reading canceled."); }
-            catch (Exception error) { if (!IsDisposed && !Disposing) status.Text = T("读取失败：", "Unable to read: ") + error.Message; }
+            catch (Exception error) { if (!IsDisposed && !Disposing) status.Text = T("读取失败：", "Unable to read: ") + Localization.Error(settings.Language, error.Message); }
             finally
             {
                 inspection = null; cancellation.Dispose();

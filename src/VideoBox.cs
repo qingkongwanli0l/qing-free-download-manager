@@ -41,7 +41,7 @@ namespace QingDownloadManager
         readonly Label status = new Label { Dock = DockStyle.Bottom, Height = 25, Padding = new Padding(6, 3, 0, 0) };
         readonly FlowLayoutPanel options = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, Padding = new Padding(5), WrapContents = true };
         bool applying;
-        string T(string zh, string en) { return settings().Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings().Language, en, zh); }
 
         public VideoBox(Func<AppSettings> settings, Action<List<DownloadItem>> onDownload, Action onSettingsChanged)
         {

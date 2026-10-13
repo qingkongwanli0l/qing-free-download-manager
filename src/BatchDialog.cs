@@ -180,7 +180,7 @@ namespace QingDownloadManager
                     catch (Exception error)
                     {
                         if (!(error is ArgumentException) && !(error is FormatException) && !(error is OverflowException)) throw;
-                        MessageBox.Show(dialog, error.Message, dialog.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show(dialog, Localization.Error(settings.Language, error.Message), dialog.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                 };
                 dialog.Controls.Add(input); dialog.Controls.Add(help); dialog.Controls.Add(ok);
@@ -213,7 +213,7 @@ namespace QingDownloadManager
                         row.Cells[6].Value = T("完成", "Complete"); loading = false;
                     }
                     catch (OperationCanceledException) { row.Cells[6].Value = T("已取消", "Canceled"); throw; }
-                    catch (Exception error) { row.Cells[6].Value = error.Message; row.Cells[6].ToolTipText = error.Message; failures++; }
+                    catch (Exception error) { row.Cells[6].Value = Localization.Error(settings.Language, error.Message); row.Cells[6].ToolTipText = Localization.Error(settings.Language, error.Message); failures++; }
                     progress.Value++; status.Text = progress.Value + " / " + grid.Rows.Count + T(" 项已扫描", " scanned");
                 }
                 status.Text = T("扫描完成；失败 ", "Scan finished; failed ") + failures + T(" 项。", ".");
@@ -294,6 +294,6 @@ namespace QingDownloadManager
         }
         private static string Extension(DownloadItem item) { return Path.GetExtension(DisplayName(item)).TrimStart('.'); }
         private static string SizeText(long value) { return value.ToString("N0") + " B"; }
-        private string T(string zh, string en) { return settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? zh : en; }
+        private string T(string zh, string en) { return Localization.Text(settings.Language, en, zh); }
     }
 }

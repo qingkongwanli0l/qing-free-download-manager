@@ -9,7 +9,7 @@ namespace QingDownloadManager
     public sealed class QueueDialog : Form
     {
         private readonly QueueSettings working;
-        private readonly bool chinese;
+        private readonly string language;
         private readonly TextBox nameBox = new TextBox();
         private readonly CheckBox enabledBox = new CheckBox();
         private readonly CheckBox renameBox = new CheckBox();
@@ -34,7 +34,7 @@ namespace QingDownloadManager
         public QueueDialog(QueueSettings queue, string language)
         {
             working = queue.Copy();
-            chinese = language != null && language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            this.language = language;
             Text = L("Edit queue", "编辑队列");
             Font = new Font("Segoe UI", 9F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -80,7 +80,7 @@ namespace QingDownloadManager
 
             daysPanel.AutoSize = true;
             daysPanel.WrapContents = true;
-            var dayLabels = chinese ? new[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" } : new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+            var dayLabels = new[] { L("Sun", "周日"), L("Mon", "周一"), L("Tue", "周二"), L("Wed", "周三"), L("Thu", "周四"), L("Fri", "周五"), L("Sat", "周六") };
             for (int index = 0; index < dayBoxes.Length; index++)
             {
                 dayBoxes[index] = new CheckBox { Text = dayLabels[index], AutoSize = true, Checked = working.Days.Contains((DayOfWeek)index) };
@@ -132,7 +132,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        private string L(string english, string chineseText) { return chinese ? chineseText : english; }
+        private string L(string english, string chineseText) { return Localization.Text(language, english, chineseText); }
 
         private static void SetupNumber(NumericUpDown box, int minimum, int maximum, int value)
         {

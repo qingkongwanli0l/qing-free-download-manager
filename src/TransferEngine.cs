@@ -260,7 +260,7 @@ namespace QingDownloadManager
                         if (type == "application/dash+xml" || type == "application/vnd.apple.mpegurl" || type == "application/x-mpegurl" || type == "audio/mpegurl" || type == "audio/x-mpegurl")
                         {
                             item.State = DownloadState.Paused;
-                            item.Error = current.Language == "zh-CN" ? "流媒体需确认后开始。" : "Streaming media starts after confirmation.";
+                            item.Error = Localization.Text(current.Language, "Streaming media starts after confirmation.", "流媒体需确认后开始。");
                             return;
                         }
                         if (automaticName && source.FileName.Length > 0) item.FileName = source.FileName;
@@ -931,13 +931,15 @@ namespace QingDownloadManager
         private static async Task CurlRequestAsync(List<string> options, DownloadItem item, AppSettings current, string headerPath, Action tick, CancellationToken token)
         {
             Uri original = new Uri(item.Url), address = original;
+            List<string> requestOptions = new List<string>(options);
+            bool redirectedToGet = false;
             for (int redirect = 0; ; redirect++)
             {
                 token.ThrowIfCancellationRequested();
                 if (File.Exists(headerPath)) File.Delete(headerPath);
-                List<string> args = new List<string>(options);
+                List<string> args = new List<string>(requestOptions);
                 args.AddRange(new string[] { "--location", "--max-redirs", "0", "--dump-header", headerPath });
-                CurlAuthentication(args, item, current, SameOrigin(original, address));
+                CurlAuthentication(args, item, current, SameOrigin(original, address), !redirectedToGet);
                 args.AddRange(new string[] { "--url", address.AbsoluteUri });
                 item.DirectUrl = AddressWithoutCredentials(address.AbsoluteUri);
                 try
@@ -962,13 +964,21 @@ namespace QingDownloadManager
                         }
                     if (location.Length == 0 || status != 301 && status != 302 && status != 303 && status != 307 && status != 308) throw;
                     if (redirect >= 49) throw new IOException("重定向次数过多。 / Too many redirects.");
+                    int method = requestOptions.IndexOf("--request");
+                    if (status <= 303 && method >= 0 && requestOptions[method + 1].Equals("POST", StringComparison.OrdinalIgnoreCase))
+                    {
+                        requestOptions.RemoveRange(method, 2);
+                        int body = requestOptions.IndexOf("--data-binary");
+                        if (body >= 0) requestOptions.RemoveRange(body, 2);
+                        redirectedToGet = true;
+                    }
                     address = new Uri(address, location);
                     if (address.Scheme != "http" && address.Scheme != "https") throw new IOException("重定向目标必须使用 HTTP 或 HTTPS。 / Redirect target must use HTTP or HTTPS.");
                 }
             }
         }
 
-        private static void CurlAuthentication(List<string> args, DownloadItem item, AppSettings current, bool includeCredentials)
+        private static void CurlAuthentication(List<string> args, DownloadItem item, AppSettings current, bool includeCredentials, bool includeContentHeaders)
         {
             args.AddRange(new string[] { "--connect-timeout", current.ConnectionTimeoutSeconds.ToString(CultureInfo.InvariantCulture) });
             if (item.Url.StartsWith("ftp:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase))
@@ -982,7 +992,13 @@ namespace QingDownloadManager
             if (includeCredentials && site != null && site.Username.Length > 0) args.AddRange(new string[] { "--user", site.Username + ":" + site.Password });
             if (includeCredentials && item.Referer.Length > 0) args.AddRange(new string[] { "--referer", item.Referer });
             if (item.UserAgent.Length > 0) args.AddRange(new string[] { "--user-agent", item.UserAgent });
-            if (includeCredentials) foreach (KeyValuePair<string, string> header in item.Headers) args.AddRange(new string[] { "--header", header.Key + ": " + header.Value });
+            if (includeCredentials) foreach (KeyValuePair<string, string> header in item.Headers)
+            {
+                if (!includeContentHeaders && (header.Key.StartsWith("Content-", StringComparison.OrdinalIgnoreCase) ||
+                    header.Key.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase) || header.Key.Equals("Expect", StringComparison.OrdinalIgnoreCase) ||
+                    header.Key.Equals("Digest", StringComparison.OrdinalIgnoreCase) || header.Key.Equals("Last-Modified", StringComparison.OrdinalIgnoreCase))) continue;
+                args.AddRange(new string[] { "--header", header.Key + ": " + header.Value });
+            }
         }
 
         private async Task RunCurlAsync(DownloadItem item, AppSettings current, CancellationToken token, bool automaticName)
@@ -990,12 +1006,12 @@ namespace QingDownloadManager
             string partial = PartialPath(item);
             string headers = Path.Combine(dataDirectory, item.Id + ".headers");
             string body = Path.Combine(dataDirectory, item.Id + ".body");
-            List<string> args = new List<string> { "--disable", "--fail", "--silent", "--show-error", "--output", partial,
-                "--retry", current.RetryCount.ToString(CultureInfo.InvariantCulture), "--retry-delay", current.RetryDelaySeconds.ToString(CultureInfo.InvariantCulture) };
+            List<string> args = new List<string> { "--disable", "--fail", "--silent", "--show-error", "--output", partial };
             if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase)) args.Add("--ssl-reqd");
             if (item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
             {
-                args.AddRange(new string[] { "--continue-at", "-" });
+                args.AddRange(new string[] { "--continue-at", "-", "--retry", current.RetryCount.ToString(CultureInfo.InvariantCulture),
+                    "--retry-delay", current.RetryDelaySeconds.ToString(CultureInfo.InvariantCulture) });
                 if (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
                 {
                     DownloadMetadata source = await PrepareHttpResumeAsync(item, current, token).ConfigureAwait(false);

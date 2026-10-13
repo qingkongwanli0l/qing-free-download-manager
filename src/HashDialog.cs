@@ -12,7 +12,7 @@ namespace QingDownloadManager
     public sealed class HashDialog : Form
     {
         private readonly string path;
-        private readonly bool chinese;
+        private readonly string language;
         private readonly string[] names = { "MD5", "SHA1", "SHA256", "SHA512" };
         private readonly Dictionary<string, TextBox> values = new Dictionary<string, TextBox>();
         private readonly TextBox expected = new TextBox();
@@ -28,7 +28,7 @@ namespace QingDownloadManager
         public HashDialog(string path, string language)
         {
             this.path = path;
-            chinese = language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            this.language = language;
             Text = T("文件摘要", "File hashes");
             Size = new Size(850, 430); MinimumSize = new Size(650, 430);
             Font = new Font("Segoe UI", 9F); AutoScaleMode = AutoScaleMode.Font;
@@ -81,7 +81,7 @@ namespace QingDownloadManager
                 CompareHash();
             }
             catch (OperationCanceledException) { status.Text = T("已取消。", "Canceled."); }
-            catch (Exception error) { status.Text = error.Message; }
+            catch (Exception error) { status.Text = Localization.Error(language, error.Message); }
             finally
             {
                 operation.Dispose(); operation = null; calculate.Text = T("重新计算", "Calculate again");
@@ -128,6 +128,6 @@ namespace QingDownloadManager
         }
 
         private static string Hex(byte[] bytes) { return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant(); }
-        private string T(string zh, string en) { return chinese ? zh : en; }
+        private string T(string zh, string en) { return Localization.Text(language, en, zh); }
     }
 }

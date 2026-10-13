@@ -8,7 +8,7 @@ namespace QingDownloadManager
     public sealed class ScheduleDialog : Form
     {
         readonly ScheduleSettings working;
-        readonly bool chinese;
+        readonly string language;
         readonly ComboBox mode = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         readonly DateTimePicker start = new DateTimePicker { Format = DateTimePickerFormat.Custom, ShowCheckBox = true };
         readonly DateTimePicker stop = new DateTimePicker { Format = DateTimePickerFormat.Custom, ShowCheckBox = true };
@@ -18,11 +18,11 @@ namespace QingDownloadManager
         readonly NumericUpDown delay = new NumericUpDown { Minimum = 1, Maximum = 86400 };
         readonly CheckBox rename = new CheckBox { AutoSize = true };
         public ScheduleSettings Result { get; private set; }
-        string T(string zh, string en) { return chinese ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(language, en, zh); }
 
         public ScheduleDialog(ScheduleSettings schedule, string language)
         {
-            working = schedule.Copy(); chinese = language == "zh-CN";
+            working = schedule.Copy(); this.language = language;
             Text = T("任务计划", "Download schedule"); Size = new Size(610, 530); MinimumSize = new Size(530, 480);
             Font = new Font("Segoe UI", 9F); StartPosition = FormStartPosition.CenterParent; ShowInTaskbar = false;
             var root = new TableLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, ColumnCount = 2, Padding = new Padding(12) };
@@ -32,7 +32,7 @@ namespace QingDownloadManager
             start.Value = working.StartAt ?? DateTime.Now.AddMinutes(5); start.Checked = working.StartAt.HasValue;
             stop.Value = working.StopAt ?? start.Value.AddHours(1); stop.Checked = working.StopAt.HasValue;
             Row(root, T("开始时间", "Start"), start); Row(root, T("停止时间（可选）", "Stop (optional)"), stop);
-            string[] labels = chinese ? new[] { "日", "一", "二", "三", "四", "五", "六" } : new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+            string[] labels = new[] { T("日", "Sun"), T("一", "Mon"), T("二", "Tue"), T("三", "Wed"), T("四", "Thu"), T("五", "Fri"), T("六", "Sat") };
             for (int i = 0; i < labels.Length; i++) days.Controls.Add(new CheckBox { Text = labels[i], AutoSize = true, Tag = (DayOfWeek)i, Checked = working.Days.Contains((DayOfWeek)i) });
             Row(root, T("星期", "Days"), days);
             interval.Value = Math.Max(1, Math.Min(interval.Maximum, working.RepeatIntervalMinutes)); Row(root, T("完成后等待（分钟）", "Wait after completion (min)"), interval);

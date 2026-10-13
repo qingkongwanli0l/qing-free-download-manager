@@ -111,7 +111,7 @@ namespace QingDownloadManager
         readonly Button skip = new Button { AutoSize = true, Enabled = false };
         ReleaseInfo release;
         public string InstallerPath { get; private set; }
-        string T(string zh, string en) { return settings.Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings.Language, en, zh); }
 
         public UpdateDialog(AppSettings settings, Action save, HttpClient client, ReleaseInfo knownRelease = null)
         {
@@ -123,7 +123,7 @@ namespace QingDownloadManager
             var never = new CheckBox { Text = T("不自动检查更新", "Never check automatically"), AutoSize = true, Checked = !settings.CheckUpdates };
             never.CheckedChanged += delegate { settings.CheckUpdates = !never.Checked; save(); };
             var page = new Button { Text = T("发行版页面", "Release page"), AutoSize = true };
-            page.Click += delegate { try { Process.Start(release == null ? "https://github.com/qingkongwanli0l/qing-free-download-manager/releases" : release.PageUrl); } catch (Exception error) { status.Text = error.Message; } };
+            page.Click += delegate { try { Process.Start(release == null ? "https://github.com/qingkongwanli0l/qing-free-download-manager/releases" : release.PageUrl); } catch (Exception error) { status.Text = Localization.Error(settings.Language, error.Message); } };
             skip.Click += delegate { settings.SkippedUpdateVersion = release.Tag; save(); Close(); };
             install.Click += Install;
             controls.Controls.AddRange(new Control[] { close, install, skip, page, never });
@@ -152,7 +152,7 @@ namespace QingDownloadManager
                 if (newer && !install.Enabled) status.Text += T(" 请从发行版页面取得适合的安装包或便携版。", " Get the appropriate installer or portable package from the release page.");
             }
             catch (OperationCanceledException) { if (!IsDisposed) status.Text = T("检查已取消或超时。", "The check was canceled or timed out."); }
-            catch (Exception error) { if (!IsDisposed) status.Text = error.Message; }
+            catch (Exception error) { if (!IsDisposed) status.Text = Localization.Error(settings.Language, error.Message); }
         }
 
         async void Install(object sender, EventArgs args)
@@ -172,7 +172,7 @@ namespace QingDownloadManager
                 InstallerPath = destination; DialogResult = DialogResult.OK; Close();
             }
             catch (OperationCanceledException) { if (!IsDisposed) status.Text = T("下载已取消或超时。", "The download was canceled or timed out."); }
-            catch (Exception error) { if (!IsDisposed) { status.Text = error.Message; install.Enabled = skip.Enabled = true; } }
+            catch (Exception error) { if (!IsDisposed) { status.Text = Localization.Error(settings.Language, error.Message); install.Enabled = skip.Enabled = true; } }
             finally
             {
                 if (InstallerPath == null)

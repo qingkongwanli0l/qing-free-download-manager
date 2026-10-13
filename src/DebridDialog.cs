@@ -12,7 +12,6 @@ namespace QingDownloadManager
     public sealed class DebridDialog : Form
     {
         readonly AppSettings settings;
-        readonly bool chinese;
         readonly DebridClient client = new DebridClient();
         readonly ListBox accounts = new ListBox { Dock = DockStyle.Fill, DisplayMember = "Name" };
         readonly ComboBox provider = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
@@ -41,7 +40,6 @@ namespace QingDownloadManager
         public DebridDialog(AppSettings appSettings)
         {
             settings = appSettings;
-            chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
             Accounts = settings.DebridAccounts.ConvertAll(account => account.Copy());
             Items = new List<DownloadItem>();
             Text = L("Debrid accounts and links", "Debrid 账号与链接");
@@ -159,7 +157,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        string L(string english, string chineseText) { return chinese ? chineseText : english; }
+        string L(string english, string chineseText) { return Localization.Text(settings.Language, english, chineseText); }
         static DataGridView Grid()
         {
             return new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false,
@@ -215,7 +213,7 @@ namespace QingDownloadManager
             stop.Enabled = true; status.Text = L("Contacting the service…", "正在连接服务…");
             try { await action(operation.Token); }
             catch (OperationCanceledException) { if (!IsDisposed) status.Text = L("Request stopped or timed out. Completed results remain below.", "请求已停止或超时。已完成的结果保留在下方。"); }
-            catch (Exception error) { if (!IsDisposed) status.Text = error.Message; }
+            catch (Exception error) { if (!IsDisposed) status.Text = Localization.Error(settings.Language, error.Message); }
             finally {
                 operation.Dispose(); operation = null;
                 if (!IsDisposed) { foreach (Control control in busyControls) control.Enabled = true; stop.Enabled = false; }
@@ -265,7 +263,7 @@ namespace QingDownloadManager
                     catch (OperationCanceledException) { throw; }
                     catch (Exception error) {
                         if (IsDisposed) return;
-                        int row = generated.Rows.Add(false, "", "", error.Message, url);
+                        int row = generated.Rows.Add(false, "", "", Localization.Error(settings.Language, error.Message), url);
                         generated.Rows[row].Cells[0].ReadOnly = true; failures++;
                     }
                     if (successes + failures < urls.Length) await Task.Delay(300, cancel);

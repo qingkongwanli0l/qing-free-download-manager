@@ -22,14 +22,14 @@ namespace QingDownloadManager
             @"Software\Chromium\NativeMessagingHosts\" + HostName
         };
         static readonly string[] FirefoxKeys = { @"Software\Mozilla\NativeMessagingHosts\" + HostName };
-        readonly bool chinese;
+        readonly string language;
         readonly string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QingFDM", "Integration");
         readonly TextBox extensionIds = new TextBox { Multiline = true, ScrollBars = ScrollBars.Vertical, Height = 74, Dock = DockStyle.Fill };
         readonly Label status = new Label { AutoSize = true, Dock = DockStyle.Fill, Padding = new Padding(0, 8, 0, 0) };
 
         public IntegrationDialog(AppSettings settings)
         {
-            chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            language = settings.Language;
             Text = L("Browser integration", "浏览器集成");
             Font = new Font("Segoe UI", 9F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -72,7 +72,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        string L(string english, string chineseText) { return chinese ? chineseText : english; }
+        string L(string english, string chineseText) { return Localization.Text(language, english, chineseText); }
         static void Add(TableLayoutPanel panel, Control control)
         {
             int row = panel.RowCount++;
@@ -124,8 +124,8 @@ namespace QingDownloadManager
         {
             try { action(); }
             catch (Exception error) {
-                status.Text = error.Message;
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                status.Text = Localization.Error(language, error.Message);
+                MessageBox.Show(this, Localization.Error(language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         string ManifestPath(bool firefox) { return Path.Combine(directory, firefox ? "firefox.json" : "chromium.json"); }
@@ -245,7 +245,7 @@ namespace QingDownloadManager
                     }
                 extensionIds.Text = String.Join(Environment.NewLine, ids);
             }
-            catch (Exception error) { status.Text = L("Saved IDs could not be read: ", "无法读取已保存的 ID：") + error.Message; }
+            catch (Exception error) { status.Text = L("Saved IDs could not be read: ", "无法读取已保存的 ID：") + Localization.Error(language, error.Message); }
         }
     }
 }

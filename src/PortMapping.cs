@@ -10,7 +10,8 @@ namespace QingDownloadManager
     public sealed class PortMapping
     {
         readonly int tcpPort, udpPort;
-        readonly bool dht, chinese;
+        readonly bool dht;
+        readonly string language;
         readonly string description = "QingFDM " + Guid.NewGuid().ToString("N");
         readonly CancellationTokenSource cancellation = new CancellationTokenSource();
         readonly Dictionary<string, Task> devices = new Dictionary<string, Task>();
@@ -19,11 +20,11 @@ namespace QingDownloadManager
 
         public PortMapping(int tcpPort, int udpPort, bool dhtEnabled, string language)
         {
-            this.tcpPort = tcpPort; this.udpPort = udpPort; dht = dhtEnabled; chinese = language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            this.tcpPort = tcpPort; this.udpPort = udpPort; dht = dhtEnabled; this.language = language;
             Status = T("UPnP：等待启动", "UPnP: waiting");
         }
 
-        string T(string zh, string en) { return chinese ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(language, en, zh); }
 
         public void Start()
         {

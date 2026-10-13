@@ -46,7 +46,7 @@ namespace QingDownloadManager
         string clipboard = "";
         int ticks;
         string filter = "all";
-        string T(string zh, string en) { return settings.Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings.Language, en, zh); }
         [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
 
         public MainForm(Storage store, SavedState state, bool startBackground)
@@ -361,12 +361,12 @@ namespace QingDownloadManager
         }
 
         void AddButton(ToolStrip bar, string label, Action action) { ToolStripButton b = new ToolStripButton(label) { DisplayStyle = ToolStripItemDisplayStyle.Text }; b.Click += delegate { Run(action); }; bar.Items.Add(b); }
-        void Run(Action action) { try { action(); } catch (Exception error) { MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); } }
+        void Run(Action action) { try { action(); } catch (Exception error) { MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); } }
         void ShowMain() { Show(); WindowState = FormWindowState.Normal; Activate(); }
         List<DownloadItem> Selected() { return list.SelectedItems.Cast<ListViewItem>().Select(x => (DownloadItem)x.Tag).ToList(); }
         static bool Active(DownloadItem item) { return item.State == DownloadState.Running || item.State == DownloadState.Seeding; }
         static string SizeText(long value) { string[] units = { "B", "KiB", "MiB", "GiB", "TiB" }; double n = value; int i = 0; while (n >= 1024 && i < units.Length - 1) { n /= 1024; i++; } return n.ToString(i == 0 ? "0" : "0.0") + " " + units[i]; }
-        string StateText(DownloadState state) { string[] zh = { "等待", "下载中", "暂停", "停止", "完成", "错误", "做种", "历史", "跳过" }; return settings.Language == "zh-CN" ? zh[(int)state] : state.ToString(); }
+        string StateText(DownloadState state) { return Localization.State(settings.Language, state); }
 
         void BuildTree()
         {
@@ -421,7 +421,7 @@ namespace QingDownloadManager
         void ShowDetails()
         {
             DownloadItem item = Selected().FirstOrDefault();
-            detail.Text = item == null ? "" : item.DisplayUrl(settings.ShowDirectUrls) + Environment.NewLine + item.OutputPath + Environment.NewLine + StateText(item.State) + " · " + SizeText(item.BytesReceived) + " / " + SizeText(item.TotalBytes) + " · " + item.Connections + T(" 个连接", " connections") + Environment.NewLine + item.Error;
+            detail.Text = item == null ? "" : item.DisplayUrl(settings.ShowDirectUrls) + Environment.NewLine + item.OutputPath + Environment.NewLine + StateText(item.State) + " · " + SizeText(item.BytesReceived) + " / " + SizeText(item.TotalBytes) + " · " + item.Connections + T(" 个连接", " connections") + Environment.NewLine + Localization.Error(settings.Language, item.Error);
             if (item != null && !String.IsNullOrEmpty(item.MediaTitle))
                 detail.AppendText(Environment.NewLine + item.MediaTitle + " · " + item.MediaQuality +
                     (item.MediaDurationSeconds > 0 ? " · " + TimeSpan.FromSeconds(item.MediaDurationSeconds).ToString(@"hh\:mm\:ss") : "") +
@@ -467,7 +467,7 @@ namespace QingDownloadManager
         async void Add(List<DownloadItem> items)
         {
             try { await AddAsync(items); }
-            catch (Exception error) { if (!IsDisposed) MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception error) { if (!IsDisposed) MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         async Task<int> AddAsync(List<DownloadItem> items)
@@ -568,7 +568,7 @@ namespace QingDownloadManager
         async void Edit()
         {
             try { await EditSelectedAsync(); }
-            catch (Exception error) { if (!IsDisposed) MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception error) { if (!IsDisposed) MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         async Task EditSelectedAsync()
@@ -651,7 +651,7 @@ namespace QingDownloadManager
                     }
                     else dialog.Finish(0);
                 }
-                catch (Exception error) { dialog.Fail(error); if (!IsDisposed) MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                catch (Exception error) { dialog.Fail(error); if (!IsDisposed) MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
                 finally { refreshAddressDialog = null; refreshingItem = null; if (!IsDisposed) Enabled = true; }
             }
         }
@@ -799,22 +799,22 @@ namespace QingDownloadManager
         }
         public static string Quote(string value) { return "\"" + value.Replace("\"", "\\\"") + "\""; }
         void OpenTorrent() { using (OpenFileDialog dialog = new OpenFileDialog { Filter = "BitTorrent|*.torrent", Multiselect = true }) if (dialog.ShowDialog(this) == DialogResult.OK) AddText(String.Join(Environment.NewLine, dialog.FileNames)); }
-        void Import() { using (OpenFileDialog dialog = new OpenFileDialog { Filter = "Text|*.txt;*.csv|All files|*.*" }) if (dialog.ShowDialog(this) == DialogResult.OK) AddText(File.ReadAllText(dialog.FileName)); }
-        void Export() { List<DownloadItem> items = Selected(); if (items.Count == 0) return; using (SaveFileDialog dialog = new SaveFileDialog { Filter = "Text|*.txt", FileName = "downloads.txt" }) if (dialog.ShowDialog(this) == DialogResult.OK) File.WriteAllLines(dialog.FileName, items.Select(x => x.Url), new UTF8Encoding(false)); }
+        void Import() { using (OpenFileDialog dialog = new OpenFileDialog { Filter = T("文本|*.txt;*.csv|所有文件|*.*", "Text|*.txt;*.csv|All files|*.*") }) if (dialog.ShowDialog(this) == DialogResult.OK) AddText(File.ReadAllText(dialog.FileName)); }
+        void Export() { List<DownloadItem> items = Selected(); if (items.Count == 0) return; using (SaveFileDialog dialog = new SaveFileDialog { Filter = T("文本|*.txt", "Text|*.txt"), FileName = "downloads.txt" }) if (dialog.ShowDialog(this) == DialogResult.OK) File.WriteAllLines(dialog.FileName, items.Select(x => x.Url), new UTF8Encoding(false)); }
 
         void ExportState()
         {
             using (var scope = new StateTransferDialog(settings.Language, false, true, true, true))
             {
                 if (scope.ShowDialog(this) != DialogResult.OK) return;
-                using (var file = new SaveFileDialog { Filter = "Qing backup|*.qingbackup", FileName = "Qing-settings-downloads.qingbackup" })
+                using (var file = new SaveFileDialog { Filter = T("Qing 备份|*.qingbackup", "Qing backup|*.qingbackup"), FileName = "Qing-settings-downloads.qingbackup" })
                     if (file.ShowDialog(this) == DialogResult.OK) storage.Export(file.FileName, settings, downloads, scope.IncludeSettings, scope.IncludeCurrent, scope.IncludeHistory);
             }
         }
 
         void ImportState()
         {
-            using (var file = new OpenFileDialog { Filter = "Qing backup|*.qingbackup" })
+            using (var file = new OpenFileDialog { Filter = T("Qing 备份|*.qingbackup", "Qing backup|*.qingbackup") })
             {
                 if (file.ShowDialog(this) != DialogResult.OK) return;
                 StateArchive archive = storage.ReadArchive(file.FileName);
@@ -988,7 +988,7 @@ namespace QingDownloadManager
                     }
                 }
             }
-            catch (Exception error) { if (!automatic && !IsDisposed) MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception error) { if (!automatic && !IsDisposed) MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
             finally { checkingUpdates = false; }
         }
 
@@ -1359,7 +1359,7 @@ namespace QingDownloadManager
             timer.Stop(); browserQueries.Cancel(); bridge.Dispose(); engine.Dispose(); SetThreadExecutionState(0x80000000u);
             if (linkBasket != null && !linkBasket.IsDisposed) linkBasket.CloseWithApplication();
             if (videoBox != null && !videoBox.IsDisposed) videoBox.Close();
-            try { Save(); } catch (Exception error) { MessageBox.Show(error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            try { Save(); } catch (Exception error) { MessageBox.Show(Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
             tray.Visible = false; tray.Dispose();
         }
 

@@ -16,7 +16,7 @@ namespace QingDownloadManager
         readonly Queue<long> samples = new Queue<long>();
         readonly Timer timer = new Timer { Interval = 1000 };
         bool closingWithApplication;
-        string T(string zh, string en) { return settings().Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings().Language, en, zh); }
 
         public LinkBasket(Func<AppSettings> settings, Action save, Func<IEnumerable<DownloadItem>> downloads, Action add, Action startAll, Action stopAll, Action configure, Action<string> drop)
         {

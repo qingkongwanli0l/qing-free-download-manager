@@ -8,7 +8,7 @@ namespace QingDownloadManager
 {
     public sealed class RefreshAddressDialog : Form
     {
-        readonly bool chinese;
+        readonly string language;
         readonly TextBox page = new TextBox();
         readonly TextBox candidateUrl = new TextBox();
         readonly TextBox candidateName = new TextBox();
@@ -23,7 +23,7 @@ namespace QingDownloadManager
 
         public RefreshAddressDialog(DownloadItem target, AppSettings settings)
         {
-            chinese = settings.Language != null && settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            language = settings.Language;
             ArmedPage = "";
             Text = T("刷新下载地址", "Refresh download address");
             Font = new Font("Segoe UI", 9F);
@@ -135,7 +135,7 @@ namespace QingDownloadManager
             }
             catch (Exception error)
             {
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, Localization.Error(language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -158,6 +158,6 @@ namespace QingDownloadManager
             fields.Controls.Add(new Label { Text = text, Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(3, 6, 3, 3) });
         }
 
-        string T(string zh, string en) { return chinese ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(language, en, zh); }
     }
 }

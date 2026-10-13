@@ -51,7 +51,7 @@ namespace QingDownloadManager
         public List<DownloadItem> Result { get; private set; }
         public DownloadItem PreDownloadItem { get; private set; }
 
-        string T(string zh, string en) { return settings.Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings.Language, en, zh); }
 
         public AddDialog(AppSettings appSettings, IEnumerable<DownloadItem> items)
             : this(appSettings, items, null) { }
@@ -80,6 +80,13 @@ namespace QingDownloadManager
             readMetadata.Click += ReadMetadata; Row(main, "", readMetadata);
             Row(main, "", metadata);
             kind.DropDownStyle = ComboBoxStyle.DropDownList; kind.Items.AddRange(new object[] { "file", "media", "audio", "torrent" });
+            kind.FormattingEnabled = true;
+            kind.Format += delegate(object sender, ListControlConvertEventArgs args)
+            {
+                string value = Convert.ToString(args.ListItem);
+                args.Value = value == "file" ? T("文件", "File") : value == "media" ? T("媒体", "Media") :
+                    value == "audio" ? T("音频", "audio") : value == "torrent" ? T("BT 下载", "BitTorrent") : value;
+            };
             if (originals.Count > 1) kind.Items.Add(T("保持各项类型", "Keep individual types"));
             Row(main, T("类型", "Type"), kind);
             category.Items.Add(""); foreach (CategorySettings c in settings.Categories) category.Items.Add(c.Name);
@@ -232,14 +239,14 @@ namespace QingDownloadManager
             }
             catch (Exception error)
             {
-                preDownloadStatus.Text = T("预下载未开始：", "Pre-download unavailable: ") + error.Message;
+                preDownloadStatus.Text = T("预下载未开始：", "Pre-download unavailable: ") + Localization.Error(settings.Language, error.Message);
             }
         }
 
         void ShowPreDownloadProgress()
         {
             DownloadItem item = PreDownloadItem; if (item == null) return;
-            if (item.Error.Length > 0) preDownloadStatus.Text = (item.State == DownloadState.Error ? T("预下载失败：", "Pre-download failed: ") : "") + item.Error;
+            if (item.Error.Length > 0) preDownloadStatus.Text = (item.State == DownloadState.Error ? T("预下载失败：", "Pre-download failed: ") : "") + Localization.Error(settings.Language, item.Error);
             else
             {
                 string percentage = item.TotalBytes > 0 ? Math.Min(100, item.BytesReceived * 100.0 / item.TotalBytes).ToString("0.0") + "% · " : "";
@@ -266,7 +273,7 @@ namespace QingDownloadManager
             catch (Exception error)
             {
                 finalizing = false; Enabled = true; preDownloadTimer.Start();
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -301,7 +308,7 @@ namespace QingDownloadManager
             catch (Exception error)
             {
                 if (!(error is IOException) && !(error is ArgumentException) && !(error is FormatException) && !(error is OverflowException) && !(error is System.ComponentModel.Win32Exception)) throw;
-                if (!IsDisposed) metadata.Text = error.Message;
+                if (!IsDisposed) metadata.Text = Localization.Error(settings.Language, error.Message);
             }
             finally
             {
@@ -409,7 +416,7 @@ namespace QingDownloadManager
             catch (Exception error)
             {
                 finalizing = false; Enabled = true; if (preDownloadEngine != null) preDownloadTimer.Start();
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -445,7 +452,7 @@ namespace QingDownloadManager
             catch (Exception error)
             {
                 if (!(error is ArgumentException) && !(error is FormatException) && !(error is OverflowException)) throw;
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

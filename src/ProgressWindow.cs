@@ -29,7 +29,7 @@ namespace QingDownloadManager
         DateTime? finishedAt;
         Point dragStart;
         bool showingFiles;
-        string T(string zh, string en) { return settings().Language == "zh-CN" ? zh : en; }
+        string T(string zh, string en) { return Localization.Text(settings().Language, en, zh); }
         sealed class Choice
         {
             public DownloadItem Item;
@@ -79,7 +79,7 @@ namespace QingDownloadManager
         }
 
         void AddButton(FlowLayoutPanel panel, string label, Action action) { var button = new Button { Text = label, AutoSize = true }; button.Click += delegate { Run(action); }; panel.Controls.Add(button); }
-        void Run(Action action) { try { action(); } catch (Exception error) { MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); } }
+        void Run(Action action) { try { action(); } catch (Exception error) { MessageBox.Show(this, Localization.Error(settings().Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); } }
         void SetState(DownloadState state) { if (Current != null) { change(Current, state); RefreshProgress(); } }
         public void Track(DownloadItem item)
         {
@@ -104,13 +104,12 @@ namespace QingDownloadManager
             long total = item.MediaVideoTotal > 0 ? item.MediaVideoTotal : item.TotalBytes, received = item.MediaVideoTotal > 0 ? item.MediaVideoBytes : item.BytesReceived;
             UpdateBar(progress, received, total, running); UpdateBar(audio, item.MediaAudioBytes, item.MediaAudioTotal, running);
             audio.Visible = audioLabel.Visible = item.MediaAudioBytes > 0 || item.MediaAudioTotal > 0;
-            string[] states = { "等待", "下载中", "暂停", "停止", "完成", "错误", "做种", "历史", "跳过" };
-            string state = settings().Language == "zh-CN" ? states[(int)item.State] : item.State.ToString();
+            string state = Localization.State(settings().Language, item.State);
             if (running && item.Phase == "processing") state = T("合并 / 转换", "Merging / converting");
             else if (running && item.Phase == "metadata") state = T("读取元数据", "Reading metadata");
             Text = (total > 0 ? (received * 100d / total).ToString("0.0") + "% · " : "") + state + " · " + (String.IsNullOrEmpty(item.FileName) ? T("下载进度", "Download progress") : item.FileName);
             string remaining = item.BytesPerSecond > 0 && total >= received ? TimeSpan.FromSeconds((total - received) / item.BytesPerSecond).ToString() : "—";
-            detail.Text = item.OutputPath + Environment.NewLine + state + " · " + SizeText(received) + " / " + SizeText(total) + Environment.NewLine + T("速度：", "Speed: ") + SizeText(item.BytesPerSecond) + "/s   " + T("剩余：", "Remaining: ") + remaining + Environment.NewLine + item.Error;
+            detail.Text = item.OutputPath + Environment.NewLine + state + " · " + SizeText(received) + " / " + SizeText(total) + Environment.NewLine + T("速度：", "Speed: ") + SizeText(item.BytesPerSecond) + "/s   " + T("剩余：", "Remaining: ") + remaining + Environment.NewLine + Localization.Error(settings().Language, item.Error);
             if (item.UploadedBytes > 0 || item.UploadBytesPerSecond > 0) detail.Text += Environment.NewLine + T("已上传：", "Uploaded: ") + SizeText(item.UploadedBytes) + " · " + SizeText(item.UploadBytesPerSecond) + "/s";
             open.Enabled = item.CompletedAt.HasValue && File.Exists(item.OutputPath);
             List<TorrentFileProgress> snapshot = item.TorrentFiles; files.Visible = snapshot.Count > 0;

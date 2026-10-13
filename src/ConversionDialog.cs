@@ -9,7 +9,7 @@ namespace QingDownloadManager
 {
     public sealed class ConversionDialog : Form
     {
-        private readonly bool chinese;
+        private readonly string language;
         private readonly ComboBox operationBox = new ComboBox();
         private readonly ListBox inputs = new ListBox();
         private readonly TextBox output = new TextBox();
@@ -47,7 +47,7 @@ namespace QingDownloadManager
 
         public ConversionDialog(AppSettings settings, IEnumerable<string> initialFiles, Dictionary<string, string> sourceLinks, MediaOperation initialOperation)
         {
-            chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            language = settings.Language;
             Text = T("媒体处理", "Media processing");
             Size = new Size(820, 760); MinimumSize = new Size(750, 640);
             Font = new Font("Segoe UI", 9F); AutoScaleMode = AutoScaleMode.Font;
@@ -122,7 +122,7 @@ namespace QingDownloadManager
             subtitlePath.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); subtitlePath.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             subtitles.Dock = DockStyle.Fill;
             var browseSubtitle = new Button { Text = T("浏览…", "Browse…"), AutoSize = true };
-            browseSubtitle.Click += delegate { using (var dialog = new OpenFileDialog { Filter = "Subtitles|*.srt;*.ass;*.ssa;*.vtt|All files|*.*" }) if (dialog.ShowDialog(this) == DialogResult.OK) subtitles.Text = dialog.FileName; };
+            browseSubtitle.Click += delegate { using (var dialog = new OpenFileDialog { Filter = T("字幕|*.srt;*.ass;*.ssa;*.vtt|所有文件|*.*", "Subtitles|*.srt;*.ass;*.ssa;*.vtt|All files|*.*") }) if (dialog.ShowDialog(this) == DialogResult.OK) subtitles.Text = dialog.FileName; };
             subtitlePath.Controls.Add(subtitles, 0, 0); subtitlePath.Controls.Add(browseSubtitle, 1, 0);
             Row(subtitlePanel, T("字幕文件", "Subtitle file"), subtitlePath);
             trimPanel = OptionPanel(options);
@@ -164,7 +164,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        private string T(string zh, string en) { return chinese ? zh : en; }
+        private string T(string zh, string en) { return Localization.Text(language, en, zh); }
         private static NumericUpDown Number(decimal minimum, decimal maximum, decimal value, int decimals)
         {
             return new NumericUpDown { Minimum = minimum, Maximum = maximum, Value = value, DecimalPlaces = decimals, ThousandsSeparator = true };
@@ -247,7 +247,7 @@ namespace QingDownloadManager
                 status.Text = T("已保存：", "Saved: ") + options.OutputPath;
             }
             catch (OperationCanceledException) { status.Text = T("已取消，原文件未改变。", "Canceled. The source was not changed."); }
-            catch (Exception error) { status.Text = error.Message; }
+            catch (Exception error) { status.Text = Localization.Error(language, error.Message); }
             finally
             {
                 operation.Dispose(); operation = null; content.Enabled = convert.Enabled = true; cancel.Text = T("关闭", "Close");

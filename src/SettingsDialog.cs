@@ -8,7 +8,7 @@ namespace QingDownloadManager
     public sealed class SettingsDialog : Form
     {
         private AppSettings working;
-        private readonly bool chinese;
+        private readonly string language;
         private readonly List<Action> saveActions = new List<Action>();
         private readonly TabControl tabs = new TabControl();
         private DataGridView sitesGrid;
@@ -22,7 +22,7 @@ namespace QingDownloadManager
         public SettingsDialog(AppSettings settings)
         {
             working = settings.Copy();
-            chinese = settings.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+            language = settings.Language;
             Text = L("Settings", "设置");
             Font = new Font("Segoe UI", 9F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -63,7 +63,7 @@ namespace QingDownloadManager
             Appearance.Apply(this);
         }
 
-        private string L(string english, string chineseText) { return chinese ? chineseText : english; }
+        private string L(string english, string chineseText) { return Localization.Text(language, english, chineseText); }
 
         private void BuildPages()
         {
@@ -198,7 +198,7 @@ namespace QingDownloadManager
             var fields = AddPage(L("General", "常规"));
             BindPath(fields, L("Download folder", "下载目录"), working.DownloadDirectory, true, delegate(string value) { working.DownloadDirectory = value; });
             BindPath(fields, L("Temporary folder", "临时目录"), working.TemporaryDirectory, true, delegate(string value) { working.TemporaryDirectory = value; });
-            BindChoice(fields, L("Language (restart required)", "语言（重启后生效）"), new[] { "English", "简体中文" }, working.Language.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? 1 : 0, delegate(int value) { working.Language = value == 1 ? "zh-CN" : "en"; });
+            BindChoice(fields, L("Language (restart required)", "语言（重启后生效）"), Localization.Names, Array.IndexOf(Localization.Codes, Localization.Normalize(working.Language)), delegate(int value) { working.Language = Localization.Codes[value]; });
             BindChoice(fields, L("Theme", "主题"), new[] { L("System", "跟随系统"), L("Light", "浅色"), L("Dark", "深色") }, working.AppearanceTheme == "dark" ? 2 : working.AppearanceTheme == "light" ? 1 : 0, delegate(int value) { working.AppearanceTheme = value == 2 ? "dark" : value == 1 ? "light" : "system"; });
             BindNumber(fields, L("Interface font size (pt)", "界面字号（pt）"), (decimal)working.UiFontSize, 8, 20, delegate(decimal value) { working.UiFontSize = (float)value; });
             BindCheck(fields, L("Center download dialogs (otherwise remember position)", "下载窗口居中（关闭后记住窗口位置）"), working.CenterPopups, value => working.CenterPopups = value);
@@ -557,7 +557,7 @@ namespace QingDownloadManager
             }
             catch (Exception error)
             {
-                MessageBox.Show(this, error.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, Localization.Error(language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             Result = candidate;

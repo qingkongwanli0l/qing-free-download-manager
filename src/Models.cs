@@ -213,8 +213,7 @@ namespace QingDownloadManager
         public static List<CategorySettings> Defaults(string language)
         {
             string[] ids = { "documents", "compressed", "programs", "images", "music", "video", "web", "other" };
-            string[] names = language == "zh-CN" ? new[] { "文档", "压缩包", "程序", "图片", "音乐", "视频", "网页", "其他" } :
-                new[] { "Documents", "Compressed", "Programs", "Images", "Music", "Video", "Web", "Other" };
+            string[] names = { Localization.Text(language, "Documents", "文档"), Localization.Text(language, "Compressed", "压缩包"), Localization.Text(language, "Programs", "程序"), Localization.Text(language, "Images", "图片"), Localization.Text(language, "Music", "音乐"), Localization.Text(language, "Video", "视频"), Localization.Text(language, "Web", "网页"), Localization.Text(language, "Other", "其他") };
             string[] extensions = {
                 "doc,docx,dot,dotx,pdf,ppt,xls,xla,xll,xlc,xlm,xlt,xlw,djvu,mpp,hlp",
                 "zip,rar,arj,z,gz,tgz,lzh,gzip,tar,xz,bz2,7z,lha,lz,ace,sea,sitx,apk,xpi,crx,rpm",
@@ -414,7 +413,7 @@ namespace QingDownloadManager
             UpdateCheckDays = 7; SkippedUpdateVersion = "";
             HistoryLimit = 1000;
             CloseProgressDelaySeconds = 3;
-            Language = CultureInfo.CurrentUICulture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh-CN" : "en";
+            Language = Localization.Normalize(CultureInfo.CurrentUICulture.Name);
             CaptureEnabled = MediaEnabled = TorrentEnabled = SeedAfterDownload = DhtEnabled = LocalPeerDiscovery = UpnpEnabled = true;
             MediaBoxRows = 5; MediaBoxOpacity = 100; MediaBoxShowThumbnails = MediaBoxShowDetails = true;
             ExcludedHosts = new List<string>();

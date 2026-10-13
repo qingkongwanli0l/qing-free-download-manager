@@ -83,7 +83,7 @@ namespace QingDownloadManager
                     catch (OperationCanceledException)
                     {
                         token.ThrowIfCancellationRequested();
-                        info.Error = settings.Language == "zh-CN" ? "读取媒体信息超时。" : "Reading media information timed out.";
+                        info.Error = Localization.Text(settings.Language, "Reading media information timed out.", "读取媒体信息超时。");
                     }
                     catch (Exception error) { info.Error = error.Message; }
                 }
@@ -95,23 +95,22 @@ namespace QingDownloadManager
 
         public static string Describe(List<MediaFileInformation> files, string language)
         {
-            bool chinese = language == "zh-CN";
-            var text = new StringBuilder(chinese ? "已保存文件的媒体信息" : "Saved file media information");
+            var text = new StringBuilder(Localization.Text(language, "Saved file media information", "已保存文件的媒体信息"));
             foreach (MediaFileInformation file in files)
             {
                 text.AppendLine().Append(file.FileName);
-                if (file.Error.Length > 0) { text.AppendLine().Append(chinese ? "无法读取：" : "Could not read: ").Append(file.Error); continue; }
+                if (file.Error.Length > 0) { text.AppendLine().Append(Localization.Text(language, "Could not read: ", "无法读取：")).Append(Localization.Error(language, file.Error)); continue; }
                 text.AppendLine().Append(file.Format).Append(" · ").Append(file.SizeBytes.ToString("N0")).Append(" B");
-                if (file.DurationSeconds > 0) text.Append(" · ").Append(file.DurationSeconds.ToString("0.###")).Append(chinese ? " 秒" : " s");
+                if (file.DurationSeconds > 0) text.Append(" · ").Append(file.DurationSeconds.ToString("0.###")).Append(Localization.Text(language, " s", " 秒"));
                 if (file.BitRate > 0) text.Append(" · ").Append((file.BitRate / 1000d).ToString("0.##")).Append(" kbps");
                 foreach (MediaStreamInformation stream in file.Streams)
                 {
-                    string type = chinese ? (stream.Type == "video" ? "视频" : stream.Type == "audio" ? "音频" : stream.Type == "subtitle" ? "字幕" : stream.Type) : stream.Type;
+                    string type = stream.Type == "video" ? Localization.Text(language, "video", "视频") : stream.Type == "audio" ? Localization.Text(language, "audio", "音频") : stream.Type == "subtitle" ? Localization.Text(language, "subtitle", "字幕") : stream.Type;
                     text.AppendLine().Append("  ").Append(type).Append(": ").Append(stream.Codec);
                     if (stream.Width > 0 && stream.Height > 0) text.Append(" · ").Append(stream.Width).Append('×').Append(stream.Height);
                     if (stream.FrameRate > 0) text.Append(" · ").Append(stream.FrameRate.ToString("0.###")).Append(" fps");
                     if (stream.SampleRate > 0) text.Append(" · ").Append(stream.SampleRate).Append(" Hz");
-                    if (stream.Channels > 0) text.Append(" · ").Append(stream.Channels).Append(chinese ? " 声道" : " channels");
+                    if (stream.Channels > 0) text.Append(" · ").Append(stream.Channels).Append(Localization.Text(language, " channels", " 声道"));
                     if (stream.BitRate > 0) text.Append(" · ").Append((stream.BitRate / 1000d).ToString("0.##")).Append(" kbps");
                     if (stream.Language.Length > 0 && stream.Language != "und") text.Append(" · ").Append(stream.Language);
                 }

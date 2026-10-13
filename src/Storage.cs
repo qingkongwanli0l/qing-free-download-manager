@@ -61,7 +61,7 @@ namespace QingDownloadManager
             if (!File.Exists(path))
             {
                 SavedState initial = new SavedState();
-                if (initialLanguage == "en" || initialLanguage == "zh-CN") initial.Settings.Language = initialLanguage;
+                if (Localization.IsSupported(initialLanguage)) initial.Settings.Language = Localization.Normalize(initialLanguage);
                 initial.Settings.Categories = CategorySettings.Defaults(initial.Settings.Language);
                 return initial;
             }
