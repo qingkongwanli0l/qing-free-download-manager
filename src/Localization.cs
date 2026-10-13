@@ -7,13 +7,16 @@ namespace QingDownloadManager
 {
     public static class Localization
     {
-        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW" };
-        public static readonly string[] Names = { "English", "简体中文", "繁體中文" };
-        static readonly Dictionary<string, string> traditional = LoadTraditional();
-
-        static Dictionary<string, string> LoadTraditional()
+        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW", "de", "fr" };
+        public static readonly string[] Names = { "English", "简体中文", "繁體中文", "Deutsch", "Français" };
+        static readonly Dictionary<string, Dictionary<string, string>> translations = new Dictionary<string, Dictionary<string, string>>
         {
-            using (Stream stream = typeof(Localization).Assembly.GetManifestResourceStream("QingFDM.Languages.zh-TW.json"))
+            { "zh-TW", Load("zh-TW") }, { "de", Load("de") }, { "fr", Load("fr") }
+        };
+
+        static Dictionary<string, string> Load(string language)
+        {
+            using (Stream stream = typeof(Localization).Assembly.GetManifestResourceStream("QingFDM.Languages." + language + ".json"))
             using (var reader = new StreamReader(stream))
                 return new JavaScriptSerializer().Deserialize<Dictionary<string, string>>(reader.ReadToEnd());
         }
@@ -21,6 +24,8 @@ namespace QingDownloadManager
         public static string Normalize(string language)
         {
             string value = (language ?? "").Replace('_', '-');
+            if (value.Equals("de", StringComparison.OrdinalIgnoreCase) || value.StartsWith("de-", StringComparison.OrdinalIgnoreCase)) return "de";
+            if (value.Equals("fr", StringComparison.OrdinalIgnoreCase) || value.StartsWith("fr-", StringComparison.OrdinalIgnoreCase)) return "fr";
             if (value.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
                 value.Equals("zh-MO", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-Hant", StringComparison.OrdinalIgnoreCase) ||
                 value.StartsWith("zh-Hant-", StringComparison.OrdinalIgnoreCase)) return "zh-TW";
@@ -36,10 +41,11 @@ namespace QingDownloadManager
         {
             string code = Normalize(language);
             if (code == "zh-CN") return simplified;
-            if (code == "zh-TW")
+            Dictionary<string, string> table;
+            if (translations.TryGetValue(code, out table))
             {
                 string translated;
-                if (traditional.TryGetValue(english + "\u001f" + simplified, out translated) || traditional.TryGetValue(english, out translated)) return translated;
+                if (table.TryGetValue(english + "\u001f" + simplified, out translated) || table.TryGetValue(english, out translated)) return translated;
             }
             return english;
         }
@@ -63,10 +69,11 @@ namespace QingDownloadManager
 
         public static string Error(string language, string message)
         {
-            if (Normalize(language) != "zh-TW" || String.IsNullOrEmpty(message)) return message;
+            Dictionary<string, string> table;
+            if (String.IsNullOrEmpty(message) || !translations.TryGetValue(Normalize(language), out table)) return message;
             string result = message;
             int matched = 0;
-            foreach (var entry in traditional)
+            foreach (var entry in table)
             {
                 if (!entry.Key.StartsWith("error:", StringComparison.Ordinal)) continue;
                 string source = entry.Key.Substring(6);
