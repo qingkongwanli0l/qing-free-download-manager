@@ -326,7 +326,7 @@ namespace QingDownloadManager
                     await RunMediaAsync(item, current, token).ConfigureAwait(false);
                 }
                 else if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase) || !item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) || !IsTorrent(item) &&
-                    (item.UseCurl && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) || HasRequestCredentials(item, current)))
+                    (item.UseCurl && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) || RequiresCurl(item, current)))
                     await RunCurlAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                 else await RunAriaAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
@@ -959,10 +959,14 @@ namespace QingDownloadManager
             return name.TrimEnd('.', ' ');
         }
 
-        private static bool HasRequestCredentials(DownloadItem item, AppSettings current)
+        private static bool RequiresCurl(DownloadItem item, AppSettings current)
         {
             SiteRule site = MediaTools.Site(item, current);
-            return item.Headers.Count > 0 || item.Referer.Length > 0 || new Uri(item.Url).UserInfo.Length > 0 || site != null && site.Username.Length > 0;
+            Uri proxy;
+            string address = site != null && site.Proxy.Length > 0 ? site.Proxy : current.Proxy;
+            bool socks = Uri.TryCreate(address, UriKind.Absolute, out proxy) &&
+                (proxy.Scheme == "socks4" || proxy.Scheme == "socks4a" || proxy.Scheme == "socks5" || proxy.Scheme == "socks5h");
+            return socks || item.Headers.Count > 0 || item.Referer.Length > 0 || new Uri(item.Url).UserInfo.Length > 0 || site != null && site.Username.Length > 0;
         }
 
         private static bool SameOrigin(Uri first, Uri second)
