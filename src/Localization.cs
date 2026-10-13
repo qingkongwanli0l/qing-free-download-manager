@@ -7,11 +7,11 @@ namespace QingDownloadManager
 {
     public static class Localization
     {
-        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW", "de", "fr", "es", "pt-BR" };
-        public static readonly string[] Names = { "English", "简体中文", "繁體中文", "Deutsch", "Français", "Español", "Português (Brasil)" };
+        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW", "de", "fr", "es", "pt-BR", "ja", "ko" };
+        public static readonly string[] Names = { "English", "简体中文", "繁體中文", "Deutsch", "Français", "Español", "Português (Brasil)", "日本語", "한국어" };
         static readonly Dictionary<string, Dictionary<string, string>> translations = new Dictionary<string, Dictionary<string, string>>
         {
-            { "zh-TW", Load("zh-TW") }, { "de", Load("de") }, { "fr", Load("fr") }, { "es", Load("es") }, { "pt-BR", Load("pt-BR") }
+            { "zh-TW", Load("zh-TW") }, { "de", Load("de") }, { "fr", Load("fr") }, { "es", Load("es") }, { "pt-BR", Load("pt-BR") }, { "ja", Load("ja") }, { "ko", Load("ko") }
         };
 
         static Dictionary<string, string> Load(string language)
@@ -28,6 +28,8 @@ namespace QingDownloadManager
             if (value.Equals("fr", StringComparison.OrdinalIgnoreCase) || value.StartsWith("fr-", StringComparison.OrdinalIgnoreCase)) return "fr";
             if (value.Equals("es", StringComparison.OrdinalIgnoreCase) || value.StartsWith("es-", StringComparison.OrdinalIgnoreCase)) return "es";
             if (value.Equals("pt", StringComparison.OrdinalIgnoreCase) || value.StartsWith("pt-", StringComparison.OrdinalIgnoreCase)) return "pt-BR";
+            if (value.Equals("ja", StringComparison.OrdinalIgnoreCase) || value.StartsWith("ja-", StringComparison.OrdinalIgnoreCase)) return "ja";
+            if (value.Equals("ko", StringComparison.OrdinalIgnoreCase) || value.StartsWith("ko-", StringComparison.OrdinalIgnoreCase)) return "ko";
             if (value.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
                 value.Equals("zh-MO", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-Hant", StringComparison.OrdinalIgnoreCase) ||
                 value.StartsWith("zh-Hant-", StringComparison.OrdinalIgnoreCase)) return "zh-TW";
