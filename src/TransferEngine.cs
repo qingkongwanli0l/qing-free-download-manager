@@ -1058,6 +1058,18 @@ namespace QingDownloadManager
                 }
                 if (restart) await CurlRequestAsync(args, item, current, headers, progress, token).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
+                if (current.UseServerTimestamp && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string modified = "";
+                    foreach (string line in File.ReadLines(headers))
+                    {
+                        if (line.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase)) modified = "";
+                        else if (line.StartsWith("Last-Modified:", StringComparison.OrdinalIgnoreCase)) modified = line.Substring(14).Trim();
+                    }
+                    DateTime timestamp;
+                    if (DateTime.TryParse(modified, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out timestamp))
+                        File.SetLastWriteTimeUtc(partial, timestamp);
+                }
                 item.BytesReceived = item.TotalBytes = new FileInfo(partial).Length;
                 if (automaticName && File.Exists(headers))
                 {
