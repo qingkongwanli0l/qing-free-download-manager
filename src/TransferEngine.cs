@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,11 +20,12 @@ namespace QingDownloadManager
         public string ContentType { get; set; }
         public long TotalBytes { get; set; }
         public string SourceUrl { get; set; }
+        public string SourceAddressHash { get; set; }
         [ScriptIgnore] public string DirectUrl { get; set; }
         public string ETag { get; set; }
         public string LastModified { get; set; }
         public bool AcceptRanges { get; set; }
-        public DownloadMetadata() { FileName = ContentType = SourceUrl = DirectUrl = ETag = LastModified = ""; TotalBytes = -1; }
+        public DownloadMetadata() { FileName = ContentType = SourceUrl = SourceAddressHash = DirectUrl = ETag = LastModified = ""; TotalBytes = -1; }
     }
 
     public sealed class TransferEngine : IDisposable
@@ -274,9 +276,10 @@ namespace QingDownloadManager
                 {
                     await RunMediaAsync(item, current, token).ConfigureAwait(false);
                 }
-                else if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase) || !item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) || !IsTorrent(item) && HasRequestCredentials(item, current))
+                else if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase) || !item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) || !IsTorrent(item) &&
+                    (item.UseCurl && (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) || HasRequestCredentials(item, current)))
                     await RunCurlAsync(item, current, token, automaticName).ConfigureAwait(false);
-                else await RunAriaAsync(transfer, current, token).ConfigureAwait(false);
+                else await RunAriaAsync(transfer, current, token, automaticName).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
                 if (transfer.PreDownload) { item.State = DownloadState.Paused; return; }
                 if (item.State == DownloadState.Skipped) return;
@@ -428,7 +431,7 @@ namespace QingDownloadManager
             return options;
         }
 
-        private async Task RunAriaAsync(Transfer transfer, AppSettings current, CancellationToken token)
+        private async Task RunAriaAsync(Transfer transfer, AppSettings current, CancellationToken token, bool automaticName)
         {
             DownloadItem item = transfer.Item;
             bool torrent = IsTorrent(item);
@@ -550,7 +553,23 @@ namespace QingDownloadManager
                         Dictionary<string, object> info = bt == null ? null : JsonObject.Object(bt, "info");
                         if (info != null && JsonObject.String(info, "name").Length > 0) item.FileName = JsonObject.String(info, "name");
                     }
-                    if (state == "error") throw new IOException(JsonObject.String(status, "errorMessage"));
+                    if (state == "error")
+                    {
+                        string error = JsonObject.String(status, "errorMessage"), partial = PartialPath(item);
+                        if (!torrent && item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+                            (item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase)) &&
+                            JsonObject.String(status, "following").Length == 0 && JsonObject.String(status, "belongsTo").Length == 0 &&
+                            JsonObject.String(status, "errorCode") == "1" && error.StartsWith("SSL/TLS handshake failure:", StringComparison.Ordinal) && error.Contains("(80090302)") &&
+                            item.BytesReceived == 0 && (!File.Exists(partial) || new FileInfo(partial).Length == 0))
+                        {
+                            await RpcAsync("aria2.removeDownloadResult", token, item.EngineId).ConfigureAwait(false);
+                            item.EngineId = ""; item.UseCurl = true;
+                            File.Delete(partial + ".aria2");
+                            await RunCurlAsync(item, current, token, automaticName).ConfigureAwait(false);
+                            return;
+                        }
+                        throw new IOException(error);
+                    }
                     if (state == "removed") throw new IOException("下载任务已从引擎移除。");
                     if (torrent && paths.Count == 1 && Path.GetFileName(paths[0]).StartsWith("[METADATA]", StringComparison.Ordinal))
                     {
@@ -809,6 +828,7 @@ namespace QingDownloadManager
             }
             finally { File.Delete(headerPath); }
             DownloadMetadata metadata = new DownloadMetadata { FileName = DispositionName(headers), SourceUrl = item.Url, DirectUrl = request.DirectUrl };
+            using (SHA256 hash = SHA256.Create()) metadata.SourceAddressHash = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(request.DirectUrl)));
             using (StringReader reader = new StringReader(headers))
             {
                 string line;
@@ -844,7 +864,8 @@ namespace QingDownloadManager
             }
             if (resume)
             {
-                bool same = previous != null && source.AcceptRanges && previous.SourceUrl == source.SourceUrl && previous.TotalBytes == source.TotalBytes &&
+                bool same = previous != null && source.AcceptRanges && previous.SourceUrl == source.SourceUrl && source.SourceAddressHash.Length > 0 &&
+                    previous.SourceAddressHash == source.SourceAddressHash && previous.TotalBytes == source.TotalBytes &&
                     (source.ETag.Length > 0 && !source.ETag.StartsWith("W/", StringComparison.OrdinalIgnoreCase) ? previous.ETag == source.ETag :
                     source.LastModified.Length > 0 && previous.LastModified == source.LastModified);
                 if (!same)

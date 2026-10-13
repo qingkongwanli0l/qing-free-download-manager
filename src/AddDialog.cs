@@ -389,6 +389,7 @@ namespace QingDownloadManager
                         if (!preDownloadDirty && item != null && item.Url == PreDownloadItem.Url && item.Kind == "file" && item.Method == "GET")
                         {
                             item.Id = PreDownloadItem.Id; item.WorkingDirectory = PreDownloadItem.WorkingDirectory; item.EngineId = PreDownloadItem.EngineId;
+                            item.UseCurl = PreDownloadItem.UseCurl;
                             item.BytesReceived = PreDownloadItem.BytesReceived; item.TotalBytes = PreDownloadItem.TotalBytes;
                             item.DirectUrl = PreDownloadItem.DirectUrl;
                             if (item.FileName.Length == 0) item.FileName = PreDownloadItem.FileName;

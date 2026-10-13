@@ -27,6 +27,7 @@ namespace QingDownloadManager
         public string Category { get; set; }
         public string QueueId { get; set; }
         public string EngineId { get; set; }
+        public bool UseCurl { get; set; }
         public string Kind { get; set; }
         public string Referer { get; set; }
         public string UserAgent { get; set; }
