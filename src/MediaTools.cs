@@ -241,7 +241,7 @@ namespace QingDownloadManager
             if (thumbnailConversions.Count > 0) args.AddRange(new string[] { "--convert-thumbnails", String.Join("/", thumbnailConversions) });
             if (media.MinimumSizeKb > 0 && !item.MediaOnlyAssets) args.AddRange(new string[] { "--min-filesize", media.MinimumSizeKb.ToString(CultureInfo.InvariantCulture) + "K" });
             if (media.MinimumDurationSeconds > 0) args.AddRange(new string[] { "--match-filter", "duration >= " + media.MinimumDurationSeconds.ToString(CultureInfo.InvariantCulture) });
-            long limit = item.SpeedLimit > 0 ? item.SpeedLimit : settings.SpeedLimit;
+            long limit = item.SpeedLimit > 0 && settings.SpeedLimit > 0 ? Math.Min(item.SpeedLimit, settings.SpeedLimit) : Math.Max(item.SpeedLimit, settings.SpeedLimit);
             if (limit > 0) args.AddRange(new string[] { "--limit-rate", limit.ToString(CultureInfo.InvariantCulture) });
             AddAuthentication(args, item, settings);
             if (media.AnimateDownload && item.Kind != "audio" && !item.MediaOnlyAssets)

@@ -1116,7 +1116,7 @@ namespace QingDownloadManager
                     args.AddRange(new string[] { "--data-binary", "@" + body });
                 }
             }
-            long limit = item.SpeedLimit > 0 ? item.SpeedLimit : current.SpeedLimit;
+            long limit = EffectiveSpeedLimit(item.SpeedLimit, current.SpeedLimit);
             if (limit > 0) args.AddRange(new string[] { "--limit-rate", limit.ToString(CultureInfo.InvariantCulture) });
             if (current.UseServerTimestamp) args.Add("--remote-time");
             long previous = File.Exists(partial) ? new FileInfo(partial).Length : 0;
