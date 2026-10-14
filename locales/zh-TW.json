@@ -755,5 +755,15 @@
   "Within original positions": "僅原序號範圍內",
   "Yes": "是",
   "YouTube concurrent fragments (1–64)": "YouTube 同時下載分段數（1–64）",
-  "YouTube fragment concurrency": "YouTube 同時下載分段數"
+  "YouTube fragment concurrency": "YouTube 同時下載分段數",
+  "Proxy mode": "代理模式",
+  "Direct connection": "直接連線",
+  "Windows system proxy": "Windows 系統代理",
+  "Manual proxy": "手動代理",
+  "A site's proxy overrides this mode; a blank site proxy inherits it. BitTorrent peer connections are direct.": "站點代理優先於此模式；站點代理留空則繼承此設定。BitTorrent 節點連線使用直連。",
+  "Enter a proxy address or choose another proxy mode.": "請填寫代理位址，或選擇其他代理模式。",
+  "Record local diagnostics": "記錄本機診斷",
+  "Logs stay on this computer. URLs, filenames, credentials and error text are excluded. Export manually from Tools.": "記錄僅保存在本機，不記錄網址、檔名、憑據或錯誤原文。可從工具選單手動匯出。",
+  "Export local diagnostics…": "匯出本機診斷…",
+  "Export local diagnostics": "匯出本機診斷"
 }

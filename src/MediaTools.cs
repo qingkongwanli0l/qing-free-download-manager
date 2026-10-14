@@ -150,8 +150,7 @@ namespace QingDownloadManager
             args.AddRange(new string[] { "--no-js-runtimes", "--js-runtimes", "quickjs:" + EnginePath("qjs.exe") });
             args.AddRange(new string[] { "--socket-timeout", settings.ConnectionTimeoutSeconds.ToString(CultureInfo.InvariantCulture) });
             SiteRule site = Site(item, settings);
-            string proxy = site != null && site.Proxy.Length > 0 ? site.Proxy : settings.Proxy;
-            if (proxy.Length > 0) args.AddRange(new string[] { "--proxy", proxy });
+            args.AddRange(new string[] { "--proxy", NetworkProxy.Resolve(new Uri(item.Url), settings, site) });
             if (site != null && site.Username.Length > 0) args.AddRange(new string[] { "--username", site.Username, "--password", site.Password });
             if (item.UserAgent.Length > 0) args.AddRange(new string[] { "--user-agent", item.UserAgent });
             if (item.Headers.Count > 0 || item.Referer.Length > 0)
@@ -336,6 +335,7 @@ namespace QingDownloadManager
             {
                 process.StartInfo = new ProcessStartInfo(executable, Arguments(arguments)) { UseShellExecute = false, CreateNoWindow = true,
                     RedirectStandardOutput = true, RedirectStandardError = true, StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
+                NetworkProxy.ClearEnvironment(process.StartInfo);
                 if (environment != null) foreach (KeyValuePair<string, string> value in environment) process.StartInfo.EnvironmentVariables[value.Key] = value.Value;
                 process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs e)
                 {

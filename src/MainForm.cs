@@ -36,7 +36,7 @@ namespace QingDownloadManager
         readonly HashSet<string> completedRemovals = new HashSet<string>();
         readonly Dictionary<string, Image> thumbnails = new Dictionary<string, Image>();
         readonly HashSet<string> requestedThumbnails = new HashSet<string>();
-        readonly HttpClient thumbnailClient = new HttpClient(new HttpClientHandler { UseCookies = false });
+        readonly HttpClient thumbnailClient;
         ProgressWindow progressWindow;
         LinkBasket linkBasket;
         VideoBox videoBox;
@@ -52,6 +52,8 @@ namespace QingDownloadManager
         public MainForm(Storage store, SavedState state, bool startBackground)
         {
             storage = store; settings = state.Settings; downloads = state.Downloads; background = startBackground || settings.StartMinimized;
+            LocalDiagnostics.BeginSession(storage.DirectoryPath, settings.DiagnosticsEnabled);
+            thumbnailClient = new HttpClient(new HttpClientHandler { UseCookies = false, Proxy = new NetworkProxy(() => settings) });
             Appearance.Configure(settings);
             Text = "Qing Free Download Manager";
             Icon = AppIcons.Normal; Size = new Size(1120, 720); MinimumSize = new Size(800, 500);
@@ -135,6 +137,7 @@ namespace QingDownloadManager
             tools.DropDownItems.Add(MakeMenu(T("浏览器集成…", "Browser integration…"), BrowserIntegration));
             tools.DropDownItems.Add(MakeMenu(T("注册种子与磁链打开方式…", "Register torrent and magnet handler…"), RegisterFileTypes));
             tools.DropDownItems.Add(MakeMenu(T("设置…", "Settings…"), Settings));
+            tools.DropDownItems.Add(MakeMenu(T("导出本地诊断…", "Export local diagnostics…"), ExportDiagnostics));
             ToolStripMenuItem help = new ToolStripMenuItem(T("帮助", "Help"));
             ToolStripMenuItem view = new ToolStripMenuItem(T("查看", "View"));
             var onTop = new ToolStripMenuItem(T("总在最前", "Always on top")) { CheckOnClick = true, Checked = settings.AlwaysOnTop };
@@ -935,6 +938,7 @@ namespace QingDownloadManager
         void ApplySettings(AppSettings value)
         {
             settings = value;
+            LocalDiagnostics.SetEnabled(settings.DiagnosticsEnabled);
             Appearance.Configure(settings); Appearance.Apply(this);
             SetTaskView(settings.TaskView, false);
             if (progressWindow != null && !progressWindow.IsDisposed) Appearance.Apply(progressWindow);
@@ -961,6 +965,11 @@ namespace QingDownloadManager
         }
 
         void BrowserIntegration() { using (IntegrationDialog dialog = new IntegrationDialog(settings)) dialog.ShowDialog(this); }
+        void ExportDiagnostics()
+        {
+            using (var dialog = new SaveFileDialog { Title = T("导出本地诊断", "Export local diagnostics"), Filter = T("文本|*.txt", "Text|*.txt"), FileName = "QingFDM-diagnostics.txt" })
+                if (dialog.ShowDialog(this) == DialogResult.OK) LocalDiagnostics.Export(dialog.FileName);
+        }
         void RegisterFileTypes()
         {
             FileAssociations.Register();
@@ -973,7 +982,7 @@ namespace QingDownloadManager
             checkingUpdates = true;
             try
             {
-                using (var client = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = System.Threading.Timeout.InfiniteTimeSpan })
+                using (var client = new HttpClient(new HttpClientHandler { UseCookies = false, Proxy = new NetworkProxy(() => settings) }) { Timeout = System.Threading.Timeout.InfiniteTimeSpan })
                 {
                     ReleaseInfo release = null;
                     if (automatic)
@@ -1365,6 +1374,7 @@ namespace QingDownloadManager
             if (videoBox != null && !videoBox.IsDisposed) videoBox.Close();
             try { Save(); } catch (Exception error) { MessageBox.Show(Localization.Error(settings.Language, error.Message), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
             tray.Visible = false; tray.Dispose();
+            LocalDiagnostics.EndSession();
         }
 
         sealed class RowComparer : IComparer

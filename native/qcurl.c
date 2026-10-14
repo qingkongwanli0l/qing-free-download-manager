@@ -63,7 +63,7 @@ int32_t QCURL_CALL qcurl_set_off_t(qcurl_request *request, int32_t option, int64
 int32_t QCURL_CALL qcurl_set_string(qcurl_request *request, int32_t option, const char *value)
 {
     switch(option) {
-    case CURLOPT_URL: case CURLOPT_PROXY: case CURLOPT_USERPWD:
+    case CURLOPT_URL: case CURLOPT_PROXY: case CURLOPT_NOPROXY: case CURLOPT_USERPWD:
     case CURLOPT_REFERER: case CURLOPT_USERAGENT: case CURLOPT_CAINFO: case CURLOPT_CUSTOMREQUEST:
         return curl_easy_setopt(request->easy, (CURLoption)option, value);
     default: return CURLE_UNKNOWN_OPTION;

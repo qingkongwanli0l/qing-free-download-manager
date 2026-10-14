@@ -12,7 +12,7 @@ namespace QingDownloadManager
     public sealed class DebridDialog : Form
     {
         readonly AppSettings settings;
-        readonly DebridClient client = new DebridClient();
+        readonly DebridClient client;
         readonly ListBox accounts = new ListBox { Dock = DockStyle.Fill, DisplayMember = "Name" };
         readonly ComboBox provider = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
         readonly TextBox name = new TextBox { Dock = DockStyle.Fill };
@@ -40,6 +40,7 @@ namespace QingDownloadManager
         public DebridDialog(AppSettings appSettings)
         {
             settings = appSettings;
+            client = new DebridClient(settings);
             Accounts = settings.DebridAccounts.ConvertAll(account => account.Copy());
             Items = new List<DownloadItem>();
             Text = L("Debrid accounts and links", "Debrid 账号与链接");

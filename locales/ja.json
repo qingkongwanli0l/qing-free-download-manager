@@ -755,5 +755,15 @@
   "Within original positions": "元の位置の範囲内",
   "Yes": "はい",
   "YouTube concurrent fragments (1–64)": "YouTube の同時フラグメント数 (1–64)",
-  "YouTube fragment concurrency": "YouTube のフラグメント同時処理数"
+  "YouTube fragment concurrency": "YouTube のフラグメント同時処理数",
+  "Proxy mode": "プロキシモード",
+  "Direct connection": "直接接続",
+  "Windows system proxy": "Windows のシステムプロキシ",
+  "Manual proxy": "手動プロキシ",
+  "A site's proxy overrides this mode; a blank site proxy inherits it. BitTorrent peer connections are direct.": "サイトのプロキシ設定がこのモードより優先されます。空欄の場合はこの設定を継承します。BitTorrent のピアには直接接続します。",
+  "Enter a proxy address or choose another proxy mode.": "プロキシのアドレスを入力するか、別のモードを選択してください。",
+  "Record local diagnostics": "ローカル診断を記録",
+  "Logs stay on this computer. URLs, filenames, credentials and error text are excluded. Export manually from Tools.": "ログはこのコンピューターにのみ保存されます。URL、ファイル名、認証情報、エラーメッセージは記録されません。「ツール」から手動でエクスポートできます。",
+  "Export local diagnostics…": "ローカル診断をエクスポート…",
+  "Export local diagnostics": "ローカル診断をエクスポート"
 }

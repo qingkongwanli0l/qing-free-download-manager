@@ -219,6 +219,8 @@ namespace QingDownloadManager
             var restoreUpdate = new Button { Text = L("Show skipped versions again", "恢复已跳过版本的提示"), AutoSize = true };
             restoreUpdate.Click += delegate { working.SkippedUpdateVersion = ""; working.LastUpdateCheckUtc = null; restoreUpdate.Text = L("Ready to apply", "待应用"); };
             AddRow(fields, "", restoreUpdate);
+            BindCheck(fields, L("Record local diagnostics", "记录本地诊断"), working.DiagnosticsEnabled, value => working.DiagnosticsEnabled = value);
+            AddRow(fields, "", new Label { AutoSize = true, MaximumSize = new Size(650, 0), Text = L("Logs stay on this computer. URLs, filenames, credentials and error text are excluded. Export manually from Tools.", "日志仅保存在本机，不记录网址、文件名、凭据或错误原文。可从工具菜单手动导出。") });
         }
 
         private void BuildDownloads()
@@ -302,10 +304,14 @@ namespace QingDownloadManager
             var fields = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 2 };
             fields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
             fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            string[] proxyModes = { "direct", "system", "manual" };
+            BindChoice(fields, L("Proxy mode", "代理模式"), new[] { L("Direct connection", "直接连接"), L("Windows system proxy", "Windows 系统代理"), L("Manual proxy", "手动代理") }, Array.IndexOf(proxyModes, working.EffectiveProxyMode), delegate(int value) { working.ProxyMode = proxyModes[value]; });
             BindText(fields, L("Proxy URL", "代理地址"), working.Proxy, delegate(string value) { working.Proxy = value.Trim(); }, false);
+            AddRow(fields, "", new Label { AutoSize = true, Text = L("A site's proxy overrides this mode; a blank site proxy inherits it. BitTorrent peer connections are direct.", "站点代理优先于此模式，站点代理留空则继承此设置。BitTorrent 节点连接使用直连。") });
             root.Controls.Add(fields, 0, 0);
             root.Controls.Add(new Label { Text = L("Site-specific proxy and sign-in. Use host names such as example.com or *.example.com. Select a row and press Delete to remove it.", "可按站点设置代理和登录信息。域名示例：example.com 或 *.example.com。选中整行后按 Delete 删除。"), AutoSize = true, Margin = new Padding(3, 10, 3, 10) }, 0, 1);
             SetupGrid(sitesGrid);
+            sitesGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             sitesGrid.Columns.Add("Host", L("Domain", "域名"));
             sitesGrid.Columns.Add("Proxy", L("Proxy URL", "代理地址"));
             sitesGrid.Columns.Add("Username", L("Username", "用户名"));
@@ -537,6 +543,11 @@ namespace QingDownloadManager
                 categories.Add(new CategorySettings { DefaultId = Convert.ToString(row.Tag), Enabled = Convert.ToBoolean(row.Cells[0].Value), Name = name, Extensions = SplitList(CellText(row, 2)), Hosts = SplitList(CellText(row, 3)), Directory = CellText(row, 4) });
             }
             foreach (var save in saveActions) save();
+            if (working.EffectiveProxyMode == "manual" && working.Proxy.Length == 0)
+            {
+                MessageBox.Show(this, L("Enter a proxy address or choose another proxy mode.", "请填写代理地址，或选择其他代理模式。"), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
             if (String.IsNullOrWhiteSpace(working.DownloadDirectory))
             {
                 MessageBox.Show(this, L("Choose a download folder.", "请选择下载目录。"), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -572,7 +583,7 @@ namespace QingDownloadManager
             int selected = tabs.SelectedIndex;
             working = new AppSettings {
                 DownloadDirectory = working.DownloadDirectory, TemporaryDirectory = working.TemporaryDirectory, FileTypeDirectories = working.FileTypeDirectories,
-                Proxy = working.Proxy, SiteRules = working.SiteRules, DebridAccounts = working.DebridAccounts,
+                Proxy = working.Proxy, ProxyMode = working.ProxyMode, SiteRules = working.SiteRules, DebridAccounts = working.DebridAccounts,
                 Categories = working.Categories, Queues = working.Queues
             };
             BuildPages();

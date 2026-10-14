@@ -7,11 +7,11 @@ namespace QingDownloadManager
 {
     public static class Localization
     {
-        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW", "de", "fr", "es", "pt-BR", "ja", "ko" };
-        public static readonly string[] Names = { "English", "简体中文", "繁體中文", "Deutsch", "Français", "Español", "Português (Brasil)", "日本語", "한국어" };
+        public static readonly string[] Codes = { "en", "zh-CN", "zh-TW", "de", "fr", "es", "pt-BR", "ja", "ko", "it", "nl", "ru", "uk", "pl", "tr" };
+        public static readonly string[] Names = { "English", "简体中文", "繁體中文", "Deutsch", "Français", "Español", "Português (Brasil)", "日本語", "한국어", "Italiano", "Nederlands", "Русский", "Українська", "Polski", "Türkçe" };
         static readonly Dictionary<string, Dictionary<string, string>> translations = new Dictionary<string, Dictionary<string, string>>
         {
-            { "zh-TW", Load("zh-TW") }, { "de", Load("de") }, { "fr", Load("fr") }, { "es", Load("es") }, { "pt-BR", Load("pt-BR") }, { "ja", Load("ja") }, { "ko", Load("ko") }
+            { "zh-TW", Load("zh-TW") }, { "de", Load("de") }, { "fr", Load("fr") }, { "es", Load("es") }, { "pt-BR", Load("pt-BR") }, { "ja", Load("ja") }, { "ko", Load("ko") }, { "it", Load("it") }, { "nl", Load("nl") }, { "ru", Load("ru") }, { "uk", Load("uk") }, { "pl", Load("pl") }, { "tr", Load("tr") }
         };
 
         static Dictionary<string, string> Load(string language)
@@ -30,6 +30,12 @@ namespace QingDownloadManager
             if (value.Equals("pt", StringComparison.OrdinalIgnoreCase) || value.StartsWith("pt-", StringComparison.OrdinalIgnoreCase)) return "pt-BR";
             if (value.Equals("ja", StringComparison.OrdinalIgnoreCase) || value.StartsWith("ja-", StringComparison.OrdinalIgnoreCase)) return "ja";
             if (value.Equals("ko", StringComparison.OrdinalIgnoreCase) || value.StartsWith("ko-", StringComparison.OrdinalIgnoreCase)) return "ko";
+            if (value.Equals("it", StringComparison.OrdinalIgnoreCase) || value.StartsWith("it-", StringComparison.OrdinalIgnoreCase)) return "it";
+            if (value.Equals("nl", StringComparison.OrdinalIgnoreCase) || value.StartsWith("nl-", StringComparison.OrdinalIgnoreCase)) return "nl";
+            if (value.Equals("ru", StringComparison.OrdinalIgnoreCase) || value.StartsWith("ru-", StringComparison.OrdinalIgnoreCase)) return "ru";
+            if (value.Equals("uk", StringComparison.OrdinalIgnoreCase) || value.StartsWith("uk-", StringComparison.OrdinalIgnoreCase)) return "uk";
+            if (value.Equals("pl", StringComparison.OrdinalIgnoreCase) || value.StartsWith("pl-", StringComparison.OrdinalIgnoreCase)) return "pl";
+            if (value.Equals("tr", StringComparison.OrdinalIgnoreCase) || value.StartsWith("tr-", StringComparison.OrdinalIgnoreCase)) return "tr";
             if (value.Equals("zh-TW", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-HK", StringComparison.OrdinalIgnoreCase) ||
                 value.Equals("zh-MO", StringComparison.OrdinalIgnoreCase) || value.Equals("zh-Hant", StringComparison.OrdinalIgnoreCase) ||
                 value.StartsWith("zh-Hant-", StringComparison.OrdinalIgnoreCase)) return "zh-TW";

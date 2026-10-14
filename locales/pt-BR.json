@@ -755,5 +755,15 @@
   "Within original positions": "Dentro das posições originais",
   "Yes": "Sim",
   "YouTube concurrent fragments (1–64)": "Fragmentos simultâneos do YouTube (1–64)",
-  "YouTube fragment concurrency": "Simultaneidade de fragmentos do YouTube"
+  "YouTube fragment concurrency": "Simultaneidade de fragmentos do YouTube",
+  "Proxy mode": "Modo de proxy",
+  "Direct connection": "Conexão direta",
+  "Windows system proxy": "Proxy do sistema Windows",
+  "Manual proxy": "Proxy manual",
+  "A site's proxy overrides this mode; a blank site proxy inherits it. BitTorrent peer connections are direct.": "O proxy do site tem prioridade sobre este modo; um campo vazio o herda. As conexões com pares BitTorrent são diretas.",
+  "Enter a proxy address or choose another proxy mode.": "Informe um endereço de proxy ou escolha outro modo.",
+  "Record local diagnostics": "Registrar diagnósticos locais",
+  "Logs stay on this computer. URLs, filenames, credentials and error text are excluded. Export manually from Tools.": "Os registros ficam neste computador. URLs, nomes de arquivos, credenciais e textos de erro são excluídos. Exporte manualmente pelo menu Ferramentas.",
+  "Export local diagnostics…": "Exportar diagnósticos locais…",
+  "Export local diagnostics": "Exportar diagnósticos locais"
 }

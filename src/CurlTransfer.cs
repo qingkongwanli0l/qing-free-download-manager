@@ -205,8 +205,8 @@ namespace QingDownloadManager
                 if (!File.Exists(ca)) throw new IOException("找不到 curl CA 证书文件。 / curl CA bundle was not found.");
                 SetString(api, handle, 10065, ca);
                 SiteRule site = Site(original.Host);
-                string proxy = site != null && site.Proxy.Length > 0 ? site.Proxy : settings.Proxy;
-                if (proxy.Length > 0) SetString(api, handle, 10004, proxy);
+                SetString(api, handle, 10004, NetworkProxy.Resolve(address, settings, site));
+                SetString(api, handle, 10177, "");
                 if (request.UserAgent.Length > 0) SetString(api, handle, 10018, request.UserAgent);
                 if (SameOrigin(original, address))
                 {

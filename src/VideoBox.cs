@@ -30,7 +30,7 @@ namespace QingDownloadManager
         readonly Dictionary<string, List<BrowserMediaCandidate>> sources = new Dictionary<string, List<BrowserMediaCandidate>>();
         readonly Dictionary<string, Image> thumbnails = new Dictionary<string, Image>();
         readonly HashSet<string> loading = new HashSet<string>();
-        readonly HttpClient client = new HttpClient(new HttpClientHandler { UseCookies = false }) { Timeout = TimeSpan.FromSeconds(10) };
+        readonly HttpClient client;
         readonly DataGridView list = new DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false, AllowUserToResizeRows = false, RowHeadersVisible = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = true, AutoGenerateColumns = false };
         readonly NumericUpDown rows = new NumericUpDown { Minimum = 2, Maximum = 20, Width = 48 };
         readonly NumericUpDown opacity = new NumericUpDown { Minimum = 20, Maximum = 100, Increment = 5, Width = 52 };
@@ -46,6 +46,7 @@ namespace QingDownloadManager
         public VideoBox(Func<AppSettings> settings, Action<List<DownloadItem>> onDownload, Action onSettingsChanged)
         {
             this.settings = settings; download = onDownload; save = onSettingsChanged;
+            client = new HttpClient(new HttpClientHandler { UseCookies = false, Proxy = new NetworkProxy(settings) }) { Timeout = TimeSpan.FromSeconds(10) };
             Font = new Font("Segoe UI", 9F); Width = 660; MinimumSize = new Size(530, 230);
             StartPosition = FormStartPosition.CenterScreen; FormBorderStyle = FormBorderStyle.SizableToolWindow;
             list.Columns.Add(new DataGridViewImageColumn { Name = "thumbnail", HeaderText = "", Width = 92, ImageLayout = DataGridViewImageCellLayout.Zoom });

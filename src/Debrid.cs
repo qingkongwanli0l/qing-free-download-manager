@@ -32,7 +32,7 @@ namespace QingDownloadManager
     public sealed class DebridClient : IDisposable
     {
         readonly HttpClient client;
-        public DebridClient() : this(new HttpClientHandler { AllowAutoRedirect = false }) { }
+        public DebridClient(AppSettings settings) : this(new HttpClientHandler { AllowAutoRedirect = false, Proxy = new NetworkProxy(() => settings) }) { }
         internal DebridClient(HttpMessageHandler handler)
         {
             client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };

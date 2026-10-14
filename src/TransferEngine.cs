@@ -38,6 +38,7 @@ namespace QingDownloadManager
             internal CurlTransfer Curl;
             internal Task CurlTask;
             internal DownloadItem Restart;
+            internal DiagnosticEngine DiagnosticsEngine;
             internal bool Removed, DeleteFiles, DeleteCompletedOutput, PreDownload;
         }
         private readonly string dataDirectory;
@@ -281,6 +282,9 @@ namespace QingDownloadManager
             DownloadItem item = transfer.Item;
             CancellationToken token = transfer.Cancellation.Token;
             bool complete = false;
+            DiagnosticProtocol protocol = LocalDiagnostics.Protocol(item.Url);
+            DiagnosticFailure failure = DiagnosticFailure.None;
+            LocalDiagnostics.Record(DiagnosticEvent.DownloadStarted, protocol);
             try
             {
                 AppSettings current = Settings();
@@ -323,6 +327,8 @@ namespace QingDownloadManager
                 PrepareWorkingDirectory(item, current);
                 if (item.Kind == "media" || item.Kind == "audio")
                 {
+                    transfer.DiagnosticsEngine = DiagnosticEngine.YtDlp;
+                    LocalDiagnostics.Record(DiagnosticEvent.EngineSelected, protocol, transfer.DiagnosticsEngine);
                     await RunMediaAsync(item, current, token).ConfigureAwait(false);
                 }
                 else if (item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase) || !item.Method.Equals("GET", StringComparison.OrdinalIgnoreCase) || !IsTorrent(item) &&
@@ -353,6 +359,7 @@ namespace QingDownloadManager
             }
             catch (OperationCanceledException error)
             {
+                if (!token.IsCancellationRequested) failure = LocalDiagnostics.Failure(error);
                 if (!token.IsCancellationRequested) { item.State = DownloadState.Error; item.Error = error.Message; }
                 else if (item.State == DownloadState.Running || item.State == DownloadState.Seeding) item.State = DownloadState.Paused;
             }
@@ -360,6 +367,7 @@ namespace QingDownloadManager
             {
                 if (!token.IsCancellationRequested)
                 {
+                    failure = LocalDiagnostics.Failure(error);
                     item.State = DownloadState.Error;
                     item.Error = error.Message;
                 }
@@ -377,6 +385,9 @@ namespace QingDownloadManager
                     restart = disposed || complete ? null : transfer.Restart;
                 }
                 transfer.Cancellation.Dispose();
+                DiagnosticEvent result = complete ? DiagnosticEvent.DownloadCompleted : item.State == DownloadState.Error ? DiagnosticEvent.DownloadFailed :
+                    item.State == DownloadState.Skipped ? DiagnosticEvent.DownloadSkipped : transfer.PreDownload && !token.IsCancellationRequested ? DiagnosticEvent.PreDownloadReady : DiagnosticEvent.DownloadStopped;
+                LocalDiagnostics.Record(result, protocol, transfer.DiagnosticsEngine, failure);
                 if (transfer.DeleteFiles) DeleteTransferFiles(item, transfer.DeleteCompletedOutput);
                 Notify(item);
                 if (restart != null) Start(restart);
@@ -410,6 +421,7 @@ namespace QingDownloadManager
                 daemonJob = new ProcessJob();
                 daemon = new Process { StartInfo = new ProcessStartInfo(MediaTools.EnginePath("aria2c.exe"), EngineProcess.Arguments(args))
                     { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true, RedirectStandardOutput = true } };
+                NetworkProxy.ClearEnvironment(daemon.StartInfo);
                 daemon.OutputDataReceived += delegate { };
                 daemon.ErrorDataReceived += delegate { };
                 daemon.Start();
@@ -468,8 +480,9 @@ namespace QingDownloadManager
                 foreach (KeyValuePair<string, string> header in item.Headers) headers.Add(header.Key + ": " + header.Value);
                 options["header"] = headers;
             }
-            string proxy = site != null && site.Proxy.Length > 0 ? site.Proxy : current.Proxy;
-            if (proxy.Length > 0) options["all-proxy"] = proxy;
+            string proxy = NetworkProxy.Resolve(new Uri(item.Url), current, site);
+            options["all-proxy"] = options["http-proxy"] = options["https-proxy"] = options["ftp-proxy"] = proxy;
+            options["no-proxy"] = "";
             if (site != null && site.Username.Length > 0)
             {
                 options["http-user"] = options["ftp-user"] = site.Username;
@@ -483,6 +496,8 @@ namespace QingDownloadManager
         private async Task RunAriaAsync(Transfer transfer, AppSettings current, CancellationToken token, bool automaticName)
         {
             DownloadItem item = transfer.Item;
+            transfer.DiagnosticsEngine = DiagnosticEngine.Aria2;
+            LocalDiagnostics.Record(DiagnosticEvent.EngineSelected, LocalDiagnostics.Protocol(item.Url), transfer.DiagnosticsEngine);
             bool torrent = IsTorrent(item);
             bool finished = false;
             if (torrent && !current.TorrentEnabled) throw new InvalidOperationException("BitTorrent 下载已禁用。");
@@ -963,10 +978,10 @@ namespace QingDownloadManager
         {
             SiteRule site = MediaTools.Site(item, current);
             Uri proxy;
-            string address = site != null && site.Proxy.Length > 0 ? site.Proxy : current.Proxy;
+            string address = NetworkProxy.Resolve(new Uri(item.Url), current, site);
             bool socks = Uri.TryCreate(address, UriKind.Absolute, out proxy) &&
                 (proxy.Scheme == "socks4" || proxy.Scheme == "socks4a" || proxy.Scheme == "socks5" || proxy.Scheme == "socks5h");
-            return socks || item.Headers.Count > 0 || item.Referer.Length > 0 || new Uri(item.Url).UserInfo.Length > 0 || site != null && site.Username.Length > 0;
+            return socks || current.EffectiveProxyMode == "system" || item.Headers.Count > 0 || item.Referer.Length > 0 || new Uri(item.Url).UserInfo.Length > 0 || site != null && site.Username.Length > 0;
         }
 
         private static bool SameOrigin(Uri first, Uri second)
@@ -992,7 +1007,7 @@ namespace QingDownloadManager
                 if (File.Exists(headerPath)) File.Delete(headerPath);
                 List<string> args = new List<string>(requestOptions);
                 args.AddRange(new string[] { "--location", "--max-redirs", "0", "--dump-header", headerPath });
-                CurlAuthentication(args, item, current, SameOrigin(original, address), !redirectedToGet);
+                CurlAuthentication(args, item, current, address, SameOrigin(original, address), !redirectedToGet);
                 args.AddRange(new string[] { "--url", address.AbsoluteUri });
                 item.DirectUrl = AddressWithoutCredentials(address.AbsoluteUri);
                 try
@@ -1031,7 +1046,7 @@ namespace QingDownloadManager
             }
         }
 
-        private static void CurlAuthentication(List<string> args, DownloadItem item, AppSettings current, bool includeCredentials, bool includeContentHeaders)
+        private static void CurlAuthentication(List<string> args, DownloadItem item, AppSettings current, Uri address, bool includeCredentials, bool includeContentHeaders)
         {
             args.AddRange(new string[] { "--connect-timeout", current.ConnectionTimeoutSeconds.ToString(CultureInfo.InvariantCulture) });
             if (item.Url.StartsWith("ftp:", StringComparison.OrdinalIgnoreCase) || item.Url.StartsWith("ftps:", StringComparison.OrdinalIgnoreCase))
@@ -1040,8 +1055,7 @@ namespace QingDownloadManager
                 else args.AddRange(new string[] { "--ftp-port", "-" });
             }
             SiteRule site = MediaTools.Site(item, current);
-            string proxy = site != null && site.Proxy.Length > 0 ? site.Proxy : current.Proxy;
-            if (proxy.Length > 0) args.AddRange(new string[] { "--proxy", proxy });
+            args.AddRange(new string[] { "--proxy", NetworkProxy.Resolve(address, current, site), "--noproxy", "" });
             if (includeCredentials && site != null && site.Username.Length > 0) args.AddRange(new string[] { "--user", site.Username + ":" + site.Password });
             if (includeCredentials && item.Referer.Length > 0) args.AddRange(new string[] { "--referer", item.Referer });
             if (item.UserAgent.Length > 0) args.AddRange(new string[] { "--user-agent", item.UserAgent });
@@ -1057,6 +1071,8 @@ namespace QingDownloadManager
         private async Task RunCurlAsync(Transfer transfer, AppSettings current, CancellationToken token, bool automaticName)
         {
             DownloadItem item = transfer.Item;
+            transfer.DiagnosticsEngine = DiagnosticEngine.Curl;
+            LocalDiagnostics.Record(DiagnosticEvent.EngineSelected, LocalDiagnostics.Protocol(item.Url), transfer.DiagnosticsEngine);
             if (!item.Url.StartsWith("http:", StringComparison.OrdinalIgnoreCase) && !item.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
             {
                 await RunCurlCliAsync(item, current, token, automaticName).ConfigureAwait(false);

@@ -56,8 +56,8 @@ namespace QingDownloadManager
                     {
                         args.AddRange(new[] { "--follow-torrent=false", "--out=metadata.torrent", "--auto-file-renaming=false", "--max-tries=" + (settings.RetryCount + 1).ToString(CultureInfo.InvariantCulture), "--retry-wait=" + settings.RetryDelaySeconds.ToString(CultureInfo.InvariantCulture) });
                         SiteRule site = MediaTools.Site(item, settings);
-                        string proxy = site != null && site.Proxy.Length > 0 ? site.Proxy : settings.Proxy;
-                        if (proxy.Length > 0) args.Add("--all-proxy=" + proxy);
+                        args.Add("--all-proxy=" + NetworkProxy.Resolve(uri, settings, site));
+                        args.Add("--no-proxy=");
                         if (site != null && site.Username.Length > 0) args.AddRange(new[] { "--http-user=" + site.Username, "--http-passwd=" + site.Password });
                         if (item.Referer.Length > 0) args.Add("--referer=" + item.Referer);
                         if (item.UserAgent.Length > 0) args.Add("--user-agent=" + item.UserAgent);

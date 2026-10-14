@@ -354,6 +354,7 @@ namespace QingDownloadManager
         public bool PreventSleep { get; set; }
         public bool UseServerTimestamp { get; set; }
         public bool CheckDuplicateDownloads { get; set; }
+        public bool DiagnosticsEnabled { get; set; }
         public bool KeepHistory { get; set; }
         public int HistoryDays { get; set; }
         public int HistoryLimit { get; set; }
@@ -373,6 +374,9 @@ namespace QingDownloadManager
         public List<string> ExcludedExtensions { get; set; }
         public string Proxy { get; set; }
         public List<SiteRule> SiteRules { get; set; }
+        public string ProxyMode { get; set; }
+        [System.Web.Script.Serialization.ScriptIgnore]
+        public string EffectiveProxyMode { get { return ProxyMode ?? (Proxy.Length > 0 ? "manual" : "direct"); } }
         public List<DebridAccount> DebridAccounts { get; set; }
         public List<CategorySettings> Categories { get; set; }
         public List<QueueSettings> Queues { get; set; }

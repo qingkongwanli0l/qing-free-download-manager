@@ -755,5 +755,15 @@
   "Within original positions": "원래 위치 범위 내",
   "Yes": "예",
   "YouTube concurrent fragments (1–64)": "YouTube 동시 조각 수(1–64)",
-  "YouTube fragment concurrency": "YouTube 조각 동시 처리 수"
+  "YouTube fragment concurrency": "YouTube 조각 동시 처리 수",
+  "Proxy mode": "프록시 모드",
+  "Direct connection": "직접 연결",
+  "Windows system proxy": "Windows 시스템 프록시",
+  "Manual proxy": "수동 프록시",
+  "A site's proxy overrides this mode; a blank site proxy inherits it. BitTorrent peer connections are direct.": "사이트 프록시가 이 모드보다 우선합니다. 비워 두면 이 설정을 따릅니다. BitTorrent 피어에는 직접 연결합니다.",
+  "Enter a proxy address or choose another proxy mode.": "프록시 주소를 입력하거나 다른 모드를 선택하세요.",
+  "Record local diagnostics": "로컬 진단 기록",
+  "Logs stay on this computer. URLs, filenames, credentials and error text are excluded. Export manually from Tools.": "로그는 이 컴퓨터에만 저장됩니다. URL, 파일 이름, 자격 증명 및 오류 원문은 기록하지 않습니다. 도구 메뉴에서 수동으로 내보낼 수 있습니다.",
+  "Export local diagnostics…": "로컬 진단 내보내기…",
+  "Export local diagnostics": "로컬 진단 내보내기"
 }
